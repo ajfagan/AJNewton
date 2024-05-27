@@ -2,3 +2,8 @@
 	path = BOISE
 	url = https://github.com/ajfagan/BOISE.git
 	branch = main
+[submodule "Rolemodel"]
+	path = Rolemodel
+	url = https://github.com/ajfagan/Rolemodel.git
+[submodules "Rolemodel"]
+	branch = main
