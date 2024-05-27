@@ -1,0 +1,4 @@
+[submodule "BOISE"]
+	path = BOISE
+	url = https://github.com/ajfagan/BOISE.git
+	branch = main
