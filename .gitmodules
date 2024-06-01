@@ -6,5 +6,3 @@
 	path = Rolemodel
 	url = https://github.com/ajfagan/Rolemodel.git
 	branch = dev
-[submodules "Rolemodel"]
-	branch = main
