@@ -1,0 +1,410 @@
+---
+title: Pairwise Comparisons 
+author: AJ Fagan
+date: 30 July, 2024
+---
+
+```{r chunk-setup, echo=F}
+knitr::opts_chunk$set(echo=F, message=F)
+n=10
+```
+
+```{r packages}
+library(dplyr)
+library(DESeq2)
+```
+
+```{r data-loading}
+df.raw <- read.csv("../base-data.txt")
+df.raw <- df.raw %>%
+  mutate(cts = exp(value) - 1) %>%
+  dplyr::rename(logcts = value)
+```
+
+```{r deseq-fitting}
+cts <- df.raw %>%
+  mutate(cts = round(cts)) %>%
+  tidyr::pivot_wider(
+    id_cols = "gene",
+    names_from = "group",
+    values_from = "cts"
+  ) %>%
+  data.frame(row.names = "gene")
+coldata <- data.frame(
+  treatment = c(rep("DMSO", 9), rep("IC50", 9), rep("IC75", 9)),
+  time = rep(c(1,1,1,24,24,24,8,8,8), 3),
+  group = rep(c("b", "c", "a"), 9),
+  batch = rep(c("May", "May", "March"), 9)
+)
+coldata$time <- factor(coldata$time, levels = c(1,8,24))
+coldata$treatment <- factor(coldata$treatment, levels = c("DMSO", "IC50", "IC75"))
+coldata$group <- factor(coldata$group, levels = c("a", "b", "c"))
+coldata$batch <- factor(coldata$batch, levels = c("March", "May"))
+# coldata = t(as.matrix(coldata))
+
+dds <- DESeqDataSetFromMatrix(
+  countData = cts,
+  colData = coldata,
+  design = ~ treatment * time + group
+)
+dds <- DESeq(dds, reduced = ~ time + group, test = "LRT")
+```
+
+
+# Overall results --- LRT
+
+Below are the results from the DESeq analysis, for the `r n=10; n` genes with the lowest adjusted $p$-value. 
+Note that, while the log2FoldChange column indicates the estimated difference in expression between 45uM and DMSO at 24 hours, the pvalue and padj columns are *independent* of time and treatment.
+Small $p$-values should be interpreted as
+
+> There is enough evidence to suggest that the observed effect of the treatment, as it interacts with a time effect, is not due to random chance. Thus, we conclude that treatment with atovaquone has an effect on the expression of this gene for at least one of the time points present.
+
+***NOT*** as
+
+> ~~There is enough evidence to suggest that the observed expression of this gene in the presence of 45 uM Atovaquone at 24 hours compared to a control at the same time point, is not due to random chance. Thus, we conclude that treatment of 45 uM atovaquone has an effect on the expression of this gene at the 24 hour time point.~~
+
+```{r deseq-results}
+as.data.frame(results(dds, contrast = c(
+                        0, # Intercept
+                        0, # IC50
+                        1, # IC75
+                        0, # Time 8
+                        0, # Time 24
+                        0, # Batch b
+                        0, # Batch c
+                        0, # IC50 x Time 8
+                        0, # IC75 x Time 8
+                        0, # IC50 x Time 24
+                        1  # IC75 x Time 24
+                        ))) %>%
+  arrange(padj) %>%
+  select(log2FoldChange, pvalue, padj) %>%
+  head(n) %>%
+  mutate_if(is.numeric, ~ as.character(signif(., 3))) %>%
+  knitr::kable()
+```
+
+
+# Pairwise results --- Wald test
+
+The test above utilized a Likelihood Ratio Test (LRT), which is incapable of obtaining separate $p$-values for contrasts.
+In order to obtain pairwise $p$-values, we need to instead utilize a Wald test. 
+A Wald test is going to be less dependable than a LRT, especially with small sample sizes such as these.
+Instances with little variation (such as if all observations were the same in all samples for a particular gene) will result in inflated $p$-values (and, hence, increased Type-I error), and genes with vary large effects may have deflated $p$-values (decreased power) due to the Hauck-Donner Effect. 
+
+These $p$-values should not be seen as the best method of determining statistically significant DE, but as a useful tool for, say, generating graphics. 
+
+```{r contrast-def}
+contrasts <- list(
+  h24_45vD = c(
+    0, # Intercept
+    0, # IC50
+    1, # IC75
+    0, # Time 8
+    0, # Time 24
+    0, # Batch b
+    0, # Batch c
+    0, # IC50 x Time 8
+    0, # IC75 x Time 8
+    0, # IC50 x Time 24
+    1  # IC75 x Time 24
+  ),
+  h24_45v30 = c(
+    0, # Intercept
+    -1, # IC50
+    1, # IC75
+    0, # Time 8
+    0, # Time 24
+    0, # Batch b
+    0, # Batch c
+    0, # IC50 x Time 8
+    0, # IC75 x Time 8
+    -1, # IC50 x Time 24
+    1  # IC75 x Time 24
+  ),
+  h24_30vD = c(
+    0, # Intercept
+    1, # IC50
+    0, # IC75
+    0, # Time 8
+    0, # Time 24
+    0, # Batch b
+    0, # Batch c
+    0, # IC50 x Time 8
+    0, # IC75 x Time 8
+    1, # IC50 x Time 24
+    0  # IC75 x Time 24
+  ),
+  h8_45vD = c(
+    0, # Intercept
+    0, # IC50
+    1, # IC75
+    0, # Time 8
+    0, # Time 24
+    0, # Batch b
+    0, # Batch c
+    0, # IC50 x Time 8
+    1, # IC75 x Time 8
+    0, # IC50 x Time 24
+    0  # IC75 x Time 24
+  ),
+  h8_45v30 = c(
+    0, # Intercept
+    -1, # IC50
+    1, # IC75
+    0, # Time 8
+    0, # Time 24
+    0, # Batch b
+    0, # Batch c
+    -1, # IC50 x Time 8
+    1, # IC75 x Time 8
+    0, # IC50 x Time 24
+    0  # IC75 x Time 24
+  ),
+  h8_30vD = c(
+    0, # Intercept
+    1, # IC50
+    0, # IC75
+    0, # Time 8
+    0, # Time 24
+    0, # Batch b
+    0, # Batch c
+    1, # IC50 x Time 8
+    0, # IC75 x Time 8
+    0, # IC50 x Time 24
+    0  # IC75 x Time 24
+  )
+)
+```
+
+
+## 24 hours
+
+### 45 uM vs DMSO
+
+```{r res24_45_D}
+save.gene.results <- function(dds, contrast) {
+  results(dds, test = "Wald", contrast = contrast[[1]]) %>%
+    as.data.frame() %>%
+    arrange(padj) %>%
+    mutate(padj = 6*padj) %>%
+    tibble::rownames_to_column("gene") %>%
+    write.table(paste(
+      "output/",
+      names(contrast)[1],
+      ".csv",
+      sep = ""
+    ), row.names=F)
+}
+show.gene.results <- function(dds, contrast, n = 10) {
+  save.gene.results(dds, contrast)
+  results(dds, test = "Wald", contrast = contrast[[1]]) %>%
+    as.data.frame() %>%
+    arrange(padj) %>%
+    mutate(padj = 6*padj) %>%
+    head(n) %>%
+    mutate_if(is.numeric, ~ as.character(signif(., 3))) %>%
+    knitr::kable()
+}
+show.gene.results(dds, contrasts[1], n = 10)
+```
+
+### 45 uM vs 30 uM
+
+```{r}
+show.gene.results(dds, contrasts[2], n = n)
+```
+
+### 30 uM vs DMSO
+
+```{r}
+show.gene.results(dds, contrasts[3], n = n)
+```
+
+## 8 hours
+
+### 45 uM vs DMSO
+
+```{r}
+show.gene.results(dds, contrasts[4], n = n)
+```
+
+### 45 uM vs 30 uM
+
+```{r}
+show.gene.results(dds, contrasts[5], n = n)
+```
+
+### 30 uM vs DMSO
+
+```{r}
+show.gene.results(dds, contrasts[6], n = n)
+```
+
+
+I also compiled all these results into a single spreadsheet for your convenience.
+The (non-gene label) columns are denoted as 
+\[
+\text{h}[\rm Time]\_[Treatment\ 1]\text{v}[\rm Treatment\ 2]\_[Statistic],
+\]
+where 
+
+- Time can be either:
+  - 8 (for 8 hours)
+  - 24 (for 24 hours)
+- Treatment 1 and 2 can be either:
+  - DMSO, (for DMSO group)
+  - 30, (for 30 uM group) or 
+  - 45 (45 uM group), and
+- Statistic can be either:
+  - padj (Adjusted $p$-value for the comparison of expression in Treatment 1 to Treatment 2 at Time hours, using a 2-sided Wald test)
+  - log2FoldChange (estimated log$_2$ fold change of expression in Treatment 1 over Treatment 2 at Time hours).
+  
+Individual files can be found in 
+\[
+\rm h[Time]\_[Treatment\ 1]v[Treatment\ 2].csv,
+\]
+denoted similarly, and the full results can be found in all.csv. 
+Further statistics (such as standard error of lfc) can be obtained trivially, upon request. 
+
+```{r}
+dd <- lapply(contrasts, function(x) results(dds, test = "Wald", contrast = x) %>% as.data.frame() %>% tibble::rownames_to_column("gene")) %>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, log2FoldChange, padj) %>%
+  mutate(padj = 6*padj) %>%
+  tidyr::pivot_longer(c(log2FoldChange, padj)) %>%
+  tidyr::pivot_wider(id_cols = "gene", names_from = c("comparison", "name"), values_from = value)
+
+dd %>%
+  arrange(h24_45vD_padj) %>%
+  write.table("output/all.csv", row.names = F)
+head(dd%>%
+  arrange(h24_45vD_padj), 10) %>%
+  mutate_if(is.numeric, ~ as.character(signif(., 3))) %>%
+  knitr::kable()
+```
+
+
+
+
+## Significant Genes
+
+Finally, to look at just the significant genes, I present a version of all.csv, but only for significant genes. 
+Genes which were found to be insignificant in all comparisons are not present. 
+If a gene is significant in one comparison, but not in one (or several) others, than the lfc and padj values for that gene are set to "NA" for the comparisons in which it is missing. 
+
+```{r}
+lapply(contrasts, function(x) {
+  results(dds, test = "Wald", contrast = x) %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("gene") %>%
+    filter(padj < 0.01 / 6)
+}) %>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, log2FoldChange, padj) %>%
+  mutate(padj = 6*padj) %>%
+  tidyr::pivot_longer(c(log2FoldChange, padj)) %>%
+  tidyr::pivot_wider(id_cols = "gene", names_from = c("comparison", "name"), values_from = value) %>%
+  arrange(h24_45vD_padj, h24_45v30_padj, h24_30vD_padj, h8_45vD_padj, h8_45v30_padj, h8_30vD_padj) %>%
+  write.table("output/significant.csv", row.names = F)
+```
+
+
+```{r}
+lapply(contrasts, function(x) {
+  (results(dds, test = "Wald", contrast = x) %>%
+    as.data.frame() %>%
+    filter(padj < 0.01 / 6) %>%
+    tibble::rownames_to_column("gene") %>%
+    summarize(genes = paste(gene, collapse = "; ")))[1,]
+}) %>%
+  as.data.frame() %>% 
+  t() %>%
+  data.frame() %>%
+  dplyr::rename("Sig. Genes" = ".") %>% 
+  tibble::rownames_to_column("Comparison") %>%
+  write.table("output/sig_genes.csv", row.names = F)
+```
+
+
+The below table summarizes the number of DE genes in each comparison, and the overlap between that and each other. 
+For example, the 95 in the 1st row, 1st column indicates that there are 95 DE genes when comparing 30uM to DMSO at 24 hours. The 418 in the 2nd row, 2nd column indicates that there are 418 DE genes for the 45uM vs 30 uM group at 24 hours. The 29 in the 1st row, 2nd column (or, equivalently, the 2nd row, 1st column) indicates that these 2 lists of length 95 and and 418 share 29 genes in common. 
+
+```{r}
+
+dd <- lapply(contrasts, function(x) {
+  results(dds, test = "Wald", contrast = x) %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("gene") %>%
+    mutate(sig = as.numeric(!is.na(padj) & padj < 0.01 / 6))
+}) %>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, sig)
+  #tidyr::pivot_wider(names_from = "gene", values_from = sig) %>%
+  #data.frame(row.names = "comparison") %>%
+  #as.matrix(dimnames = list(rownames(.), NULL)) %>%
+
+compdata <- data.frame(
+  time = rep(c("24 Hours", "8 Hours"), each = 3),
+  d1 = rep(c("45 uM", "45 uM", "30 uM"), 2),
+  d2 = rep(c("DMSO", "30 uM", "DMSO"), 2),
+  row.names = unique(dd$comparison)
+)
+
+dd <- dd %>%
+  {
+    dd <- .
+    ccs <- unique(dd$comparison)
+    combs <- combn(ccs, 2, simplify = T)
+    combs <- cbind(combs, rbind(combs[2,], combs[1,]), rbind(ccs, ccs))
+    data.frame(
+      c1 = combs[1,],
+      c2 = combs[2,],
+      n = apply(combs, 2, function(cc) {
+        (dd %>%
+          filter(comparison %in% cc) %>%
+          group_by(gene) %>%
+          summarize(b = sum(sig) == length(unique(cc))) %>%
+          summarize(b = sum(b)))[1,1, 1]
+      }),
+      time1 = sapply(combs[1,], function(x) compdata[x, "time"]),
+      time2 = sapply(combs[2,], function(x) compdata[x, "time"]),
+      d11 = sapply(combs[1,], function(x) compdata[x, "d1"]),
+      d12 = sapply(combs[1,], function(x) compdata[x, "d2"]),
+      d21 = sapply(combs[2,], function(x) compdata[x, "d1"]),
+      d22 = sapply(combs[2,], function(x) compdata[x, "d2"])
+    )
+  }
+
+dd2 <- dd %>% 
+  dplyr::select(-c(c1, c2)) %>%
+  arrange(time2, d21, d22) %>%
+  tidyr::pivot_wider(
+    id_cols = c("time1", "d11", "d12"),
+    names_from = c("time2", "d21", "d22"),
+    values_from = n,
+    values_fn = mean
+  )# %>%
+dd2 %>%
+  arrange(time1, d11, d12) %>%
+  select(-time1) %>%
+  dplyr::rename("Treatment 1" = "d11") %>%
+  dplyr::rename("Treatment 2" = "d12") %>%
+  knitr::kable(align = 'llrrrrrr') %>% 
+  #kableExtra::collapse_rows(1, valign = "top", latex_hline = "major") %>%
+  #kableExtra::kbl(booktabs = T) %>%
+  kableExtra::pack_rows(group_label = "Time", index = table(forcats::fct_inorder(as.character(dd2$time1)), useNA = "no")) %>%
+  #kableExtra::pack_rows(group_label = "Treatment 1", index = table(forcats::fct_inorder(as.character(dd2$d11)), useNA = "no")) %>%
+  kableExtra::header_separate(sep = "_")
+```
+
+
+
+
+
+
+
+
+
+
+
