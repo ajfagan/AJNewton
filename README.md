@@ -89,18 +89,151 @@ My aim is to extend multiset methods to multi-list and multi-score contexts.
 
 ## Proposed thesis topics
 
-1. Hypothesis-testing variant of SynToxProfiler --- focus less on the ranking of a large library of drug-combinations, and, instead, given a particular drug combination, determine synergy using data drawn from experiments on both healthy and cancerous tissue. 
-    
-    A. Can I use healthy tissue as a "null" to help guide additivity?
-    
-    B. Is this capable of weeding out toxic, synergistic compounds?
-2. Network-Based Synergy --- while various methods exist that either predict the results of synergy experiments, or attempt to explain synergistic mechanisms through GRNs, all of these methods (that I've yet found) are still glued to the existing notion of drug synergy via cell survival of cancer cells in vitro. 
-    
-    A. Can I develop an alternative formulation of synergy that relies solely upon gene-level data?
-    
-    B. Can I modify these methods to include data on healthy tissue?
-3. Synergy calculations in non-monotonic dose-response curves --- As far as I've seen, all synergy methods assume a monotone dose-response curve. This assumption is absolutely crucial, for example, in the ubiquitous Loewe additivity formulation, and other methods that require curve-fitting. Other methods, like Bliss additivity, can avoid this constraint. But in any case, the entire notion of synergy is called into question when dealing with non-monotone dose-response curves. 
+### Hypothesis-testing variant of SynToxProfiler 
 
-    A. What does synergy mean in a system with non-monotone dose-response curves?
+Focus less on the ranking of a large library of drug-combinations, and, instead, given a particular drug combination, determine synergy using data drawn from experiments on both healthy and cancerous tissue. 
+    
+1. Can I use healthy tissue as a "null" to help guide additivity?
+2. Is this capable of weeding out toxic, synergistic compounds?
 
-    B. Can existing methods be applied?
+### Synergy Aggregation 
+
+Due to the 3d shape of the dose-response curve, it can be difficult, even given a particular type of additivity, to determine how synergistic two drugs are.
+Many methods integrate over the domain to get a holistic view of the drugs interaction. 
+But this may not be reasonable --- two drugs could feasibly be synergistic for low A, high B, but antagonistic for high A, low B. 
+
+1. Are there right or wrong ways to aggregate synergy scores over the domain?
+2. Is aggregation necessary?
+
+The ideal synergistic drug combination would not just exhibit synergy for a small range of doses, but over a larger range. 
+
+Maybe instead of integrating $f_{AB} - \hat f_{AB}$, we instead integrate $\max\{0, f_{AB} - \tilde f_{AB}\}$?
+
+$$
+Syn_{AB} = \lim_{M_A,M_B\to\infty}\frac{\int_0^{M_B}\int_0^{M_B} \max\left\{0, f_{AB}(a,b) - \tilde f_{AB}(a,b)\right\}dbda}{\int_0^{M_B}\int_0^{M_B}dbda}
+$$
+
+$$
+Ant_{AB} = \lim_{M_A,M_B\to\infty}-\frac{\int_0^{M_B}\int_0^{M_B} \min\left\{0, f_{AB}(a,b) - \tilde f_{AB}(a,b)\right\}dbda}{\int_0^{M_B}\int_0^{M_B}dbda}
+$$
+
+This approach would allow for a drug combination to be both synergistic and antagonistic, such as in the case given above. 
+Although, really, we don't just want to see an overall large amount points where $f_{AB} > \tilde f_{AB}$, we want one or more large areas where this is the case.
+
+Let 
+$$
+    \Omega\subset\mathbb R^2 = \left\{(a,b) | f_{AB}(a,b) > \tilde f_{AB}(a,b)\right\},
+$$
+and suppose we can write
+$$
+    \Omega = \bigcup_{i=1}^{\infty}\omega_i,
+$$
+where the $\omega_i$ are disjoint, connected, open subsets of $\mathbb R^2$, such that
+$$
+    i < j \implies \int I\left((a,b) \in \omega_i\right)d(a,b) > \int I((a,b) \in \omega_j)d(a,b).
+$$
+
+We can then, given $h:\mathbb N\to\mathbb R$, define a synergy score along the lines of 
+$$
+    Syn_{AB, h} = \sum_{i=1}^\infty h(i)
+            \int_{\omega_i}f_{AB}(a,b) - \tilde f_{AB}(a,b)d(a,b).
+$$
+Some ideas for $h$ are
+- $h(i) = \begin{cases} 1, & i = 1 \\ 0, & \text{otherwise} \end{cases}$,
+- $h(i) = i^{-2}$  (like the inverse-square thingy)
+- $h(i) = \frac{1}{i!}$ (like the exponential thingy)
+
+And we could consider using, e.g., $\tilde h$ selected from above, and then selecting
+$$
+    h(i) = \frac{\tilde h(i)}{\int_{\omega_i}d(a,b)}.
+$$
+
+An antagonism score, $Ant_{AB, h}$ can be derived similarly
+
+
+### Network-Based Synergy 
+
+While various methods exist that either predict the results of synergy experiments, or attempt to explain synergistic mechanisms through GRNs, all of these methods (that I've yet found) are still glued to the existing notion of drug synergy via cell survival of cancer cells in vitro. 
+
+1. Can I develop an alternative formulation of synergy that relies solely upon gene-level data?
+2. Can I modify these methods to include data on healthy tissue?
+
+
+A potential direction to solving my issues with synergy is to consider it in the framework of these gene networks.
+Network interpretation methods like SANEpool attempt to explain synergy scores in terms of them. 
+But I have not yet found any sources that search for synergy *within* the network. 
+A different approach to synergy may be to find subnetworks (e.g. gene sets) that are "synergistic". 
+
+$$
+    \Theta^{1/2} Y_i \sim N(\mu + A_i + B_i + (AB)_i, I_G) 
+$$ 
+
+$$
+    f_\mu(\mu)\propto 1 
+$$
+
+$$
+    A_{i} = ZT_A, B_i = ZT_B, (AB)_i = ZT_{AB} 
+$$
+
+$$
+    T_{A,s}\sim \begin{cases}
+        \delta_0, & \omega_{A,s} = 0 \\ 
+        N(0, \sigma_A^2), & \omega_{A,s} = 1
+    \end{cases} 
+$$
+
+$$
+    T_{B,s}\sim \begin{cases}
+        \delta_0, & \omega_{B,s} = 0 \\ 
+        N(0, \sigma_B^2), & \omega_{B,s} = 1
+    \end{cases}
+$$ 
+
+$$
+    T_{AB,s}\sim \begin{cases}
+        \delta_0, & \omega_{AB,s} = 0 \\ 
+        N(0, \sigma_{AB}^2), & \omega_{AB,s} = 1
+    \end{cases} 
+$$
+
+$$
+    \sum_{s\in S}\omega_{A} \sim \begin{cases}
+        \delta_0, & \omega_A\text{ does not satisfy AH} \\
+        Bin(|S|, \pi_A), & \omega_A\text{ satisfies AH}
+    \end{cases} 
+$$
+
+$$
+    \sum_{s\in S}\omega_{B} \sim \begin{cases}
+        \delta_0, & \omega_B\text{ does not satisfy AH} \\
+        Bin(|S|, \pi_B), & \omega_B\text{ satisfies AH}
+    \end{cases}
+$$
+
+$$
+    \sum_{s\in S}\omega_{AB} \sim \begin{cases}
+        \delta_0, & \omega_{AB}\text{ does not satisfy AH} \\
+        Bin(|S|, \pi_{AB}), & \omega_{AB}\text{ satisfies AH}
+    \end{cases} \\
+$$
+
+| $\omega_A$ | $\omega_B$ | $\omega_{AB}$ | Interpretation |
+|------------|------------|---------------|----------------------------------------------------|
+| 0          | 0          | 0             | Yawn                                               |
+| 1          | 0          | 0             | Active in A, unaffected by B                       |
+| 0          | 1          | 0             | Active in B, unaffected by A                       |
+| 0          | 0          | 1             | Active only with A+B (synergy? gain-of-function?)  |
+| 1          | 1          | 0             | Additive/Warring Combination                       |
+| 1          | 0          | 1             | Active in A, potentiated/blocked by B              |
+| 0          | 1          | 1             | Active in B, potentiated/blocked by A              |
+| 1          | 1          | 1             | Active in both, with synergy/antagonism/warring    |
+
+
+
+### Synergy calculations in non-monotonic dose-response curves 
+
+As far as I've seen, all synergy methods assume a monotone dose-response curve. This assumption is absolutely crucial, for example, in the ubiquitous Loewe additivity formulation, and other methods that require curve-fitting. Other methods, like Bliss additivity, can avoid this constraint. But in any case, the entire notion of synergy is called into question when dealing with non-monotone dose-response curves. 
+
+1. What does synergy mean in a system with non-monotone dose-response curves?
+2. Can existing methods be applied?
