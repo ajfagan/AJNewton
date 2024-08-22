@@ -30,7 +30,7 @@ Rhesus Macacs
 Normal endometrial tissue + endometriosis + liver, 6 samples in each, minus failures
 No human samples were sent. 
 Some did not pass QC.
-Main comparison, endometriosis vs normal within the same macac. 
+Main comparison, endometriosis vs normal within the same macaque. 
 
 I don't need to be as involved
 
