@@ -1,0 +1,26 @@
+\newcommand{\etalchar}[1]{$^{#1}$}
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{CYC{\etalchar{+}}21}
+
+\bibitem[Cho76]{CHOU1976253}
+Ting-Chao Chou, \emph{Derivation and properties of michaelis-menten type and hill type equations for reference ligands}, Journal of Theoretical Biology \textbf{59} (1976), no.~2, 253--276.
+
+\bibitem[CYC{\etalchar{+}}21]{CHENG2021111652}
+Cong Cheng, Fang Yuan, Xiao-Ping Chen, Wei Zhang, Xie-Lan Zhao, Zhi-Ping Jiang, Hong-Hao Zhou, Gan Zhou, and Shan Cao, \emph{Inhibition of nrf2-mediated glucose metabolism by brusatol synergistically sensitizes acute myeloid leukemia to ara-c}, Biomedicine and Pharmacotherapy \textbf{142} (2021), 111652.
+
+\bibitem[IGA22]{synergyfinder}
+Aleksandr Ianevski, Anil~K Giri, and Tero Aittokallio, \emph{{SynergyFinder 3.0: an interactive analysis and consensus interpretation of multi-drug synergies across multiple samples}}, Nucleic Acids Research \textbf{50} (2022), no.~W1, W739--W743.
+
+\bibitem[ITK{\etalchar{+}}20]{Ianevski2020-sv}
+Aleksandr Ianevski, Sanna Timonen, Alexander Kononov, Tero Aittokallio, and Anil~K Giri, \emph{{SynToxProfiler}: An interactive analysis of drug combination synergy, toxicity and efficacy}, PLoS Comput Biol \textbf{16} (2020), no.~2, e1007604 (en).
+
+\bibitem[LZZ{\etalchar{+}}19]{drugcombdb}
+Hui Liu, Wenhao Zhang, Bo~Zou, Jinxian Wang, Yuanyuan Deng, and Lei Deng, \emph{{DrugCombDB: a comprehensive database of drug combinations toward the discovery of combinatorial therapy}}, Nucleic Acids Research \textbf{48} (2019), no.~D1, D871--D881.
+
+\end{thebibliography}
