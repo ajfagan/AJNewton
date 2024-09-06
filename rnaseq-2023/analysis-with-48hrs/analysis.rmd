@@ -1,0 +1,113 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r chunk-setup, echo=F}
+knitr::opts_chunk$set(echo=F, message=F)
+n=10
+```
+
+```{r}
+library(org.Hs.eg.db)
+library(dplyr)
+library(AnnotationDbi)
+library(DESeq2)
+library(allez)
+library(pheatmap)
+library(RColorBrewer)
+```
+
+```{r, include=F}
+df <- read.csv("../expression.mat", sep = "\t", row.names=1)
+df.coding <- df[rowSums(df) > 0, ]
+df.gene <- df.coding
+df.gene$gene <- rownames(df.gene)
+cts <- df.gene %>%
+  mutate(
+    symbol = (
+      AnnotationDbi::select(org.Hs.eg.db, columns = c("ENSEMBL", "SYMBOL"), keys = rownames(df.coding), keytype = "ENSEMBL") %>%
+        group_by(ENSEMBL) %>%
+        summarize(SYMBOL = SYMBOL[1]) %>%
+        data.frame(row.names = "ENSEMBL")
+    )[gene, "SYMBOL"]
+  ) %>%
+  filter(!is.na(symbol)) %>%
+  group_by(symbol) %>%
+  summarise_at(1:36, sum) %>%
+  data.frame(row.names = 1) %>%
+  round()
+
+head(cts)
+```
+
+
+
+```{r include=F}
+coldata <- data.frame(
+  treatment = as.factor(c(30, 30, 30, 45, 45, 45, "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", 30,30,30,30,30,30,30,30,30,45,45,45,45,45,45,45,45,45)),
+  time = as.factor(c(48,48,48,48, 48,48,1,1,1,24,24,24,8,8,8,48,48,48,1,1,1,24,24,24,8,8,8,1,1,1,24,24,24,8,8,8)),
+  batch = as.factor(c("d", "d", "d", "d", "d", "d", "b", "c", "a", "b", "c", "a", "b", "c", "a", "d", "d", "d", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a"))
+)
+coldata$batchA <- coldata$batch == "a"
+
+dds <- DESeqDataSetFromMatrix(
+  countData = cts, 
+  colData = coldata,
+  design = ~ treatment*time + batchA
+)
+
+dds <- DESeq(dds, reduced = ~time + batchA, test = "LRT")
+```
+
+
+# Data visualization
+
+First, we plot a hierarchical clustering of the data according to the raw estimated number of counts.
+The plot shows that batches a, b/c, and d have huge differences between them, which cause the batch effect to be much more prevalent than either the treatment or time effect.
+In particular, batch a seems much further than the others, while batch d seems fairly close to b/c.
+Batch d contains only samples after 48 hours, so differences between it and b/c are unsurprising.
+
+```{r hierarchical-clustering, echo=FALSE, warning=FALSE, message=FALSE}
+ntd <- normTransform(dds)
+sampleDists <- dist(t(assay(ntd)))
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(ntd$time, ntd$treatment, ntd$group, sep="-")
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+
+A PCA plot supports this notion. 
+This one seems to suggest that the vast majority of variance in the data can be attributed to variation between batch a, and the others. 
+After that, the next largest contributor to variance seems to be differentiating between groups b/c and d, and, finally, between b and c.
+
+```{r pca-plot, echo=FALSE, warning=FALSE, message=FALSE}
+plotPCA(ntd, intgroup = c("batch"), pcsToUse = 1:2)
+```
+
+
+The 10 genes with the lowest FDR-adjusted $p$-value are shown below.
+
+```{r}
+(as.data.frame(results(dds)) %>% arrange(padj))[1:10,]
+```
+
+
+```{r}
+library(pathfindR)
+
+path.out <- run_pathfindR(
+  as.data.frame(results(dds)) %>%
+    mutate(gene = rownames(.)) %>%
+    dplyr::select(gene, log2FoldChange, padj) %>%
+    mutate(padj = ifelse(is.na(padj), 1, padj))
+)
+```
+
+
+
