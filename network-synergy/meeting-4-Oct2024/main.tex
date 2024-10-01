@@ -4,6 +4,9 @@
 \title{Network Synergy Project Intro}
 \date{October 4, 2024}
 
+\usepackage{graphicx}
+\graphicspath{ { ./figs } }
+
 \usetheme{Madrid}
 \usecolortheme{beaver}
 
@@ -27,13 +30,13 @@
 \begin{frame}
   \frametitle{Promises of Synergistic Combinations}
   \begin{itemize}
-    \item Overcoming chemoresistance
+    \item Overcoming chemoresistance 
     \item Repurposing existing drugs
     \item Increasing efficacy
     \item Reducing toxicity
   \end{itemize}
 
-  And then I do the bit where I say that potency synergy only actually enables consideration of the first 3.
+  And then I do the bit where I say that potency synergy only actually enables consideration of the first 3.    
 \end{frame}
 
 \begin{frame}
@@ -57,19 +60,25 @@
 
 \begin{frame}
   \frametitle{Module Approach}
-  Include figs from Barabasi paper.
-
-  Discuss the different principles.
+  \begin{figure}[!htb]
+    \minipage{0.4\textwidth}
+      \includegraphics[width=\linewidth, height=200]{figs/barabasi-hypertension}
+    \endminipage
+    \minipage{0.4\textwidth}
+      \includegraphics[width=\linewidth, height=200]{figs/barabasi-cancer.png}
+    \endminipage
+  \end{figure}
 \end{frame}
 
 \begin{frame}
   \frametitle{Module Approach - Further Directions}
-  The Barabasi paper only really discusses efficacy via approved drug combinations --- biased.
+  The Barabasi paper only really discusses efficacy of the principles via approved drug combinations --- biased.
   \vfill
   Try to expand on this method by:
   \begin{itemize}
       \item Performing network analysis of drug combinations (0, A, B, AB) in various principles.
       \item Considering \underline{T}umor \underline{M}icro\underline{e}nvironments (TMEs).
+      \item Similarity scores were reduced to binary $\geq0$ or $<0$ --- do smaller/larger similarity scores make a difference?
   \end{itemize}
 \end{frame}
 
@@ -115,5 +124,18 @@
   Never mentions networks. What principles are exhibited in these data? 
 \end{frame}
 
+\section{Prediction of in vivo efficacy}
+
+\begin{frame}
+  \frametitle{Predicting in vivo efficacy}
+  More generally, the goal of this project is to develop a metric that is:
+  \begin{itemize}
+    \item Inexpensive to obtain
+    \item Simple to calculate
+    \item Predictive of \textit{in vivo} outcomes
+  \end{itemize}
+
+  As a result, would likely need either to conduct \textit{in vivo} (e.g. murine) studies, or try to utilize existing data. 
+\end{frame}
 
 \end{document}

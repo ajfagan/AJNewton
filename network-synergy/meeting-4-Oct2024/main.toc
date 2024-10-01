@@ -1,3 +1,4 @@
 \beamer@sectionintoc {1}{Drug Synergy}{3}{0}{1}
 \beamer@sectionintoc {2}{Network Synergy}{6}{0}{2}
 \beamer@sectionintoc {3}{Tumor Microenvironments}{10}{0}{3}
+\beamer@sectionintoc {4}{Prediction of in vivo efficacy}{12}{0}{4}

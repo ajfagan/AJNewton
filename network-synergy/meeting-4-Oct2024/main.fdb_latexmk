@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1727797779.47084 "main.tex" "main.pdf" "main" 1727797780.09702 0
+["pdflatex"] 1727808296.44366 "main.tex" "main.pdf" "main" 1727808297.48669 2
   "/nix/store/srny5gxcb9ms5cgkp02ghdc34iy6h75z-texlive-combined-medium-2023-final/share/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1 334078 35f6f22514f6b865c615cf3fa3e9d34e ""
   "/nix/store/srny5gxcb9ms5cgkp02ghdc34iy6h75z-texlive-combined-medium-2023-final/share/texmf-var/web2c/pdftex/pdflatex.fmt" 1 8021575 1b372cbe22c0fe9e69dd4a9b6debff31 ""
   "/nix/store/srny5gxcb9ms5cgkp02ghdc34iy6h75z-texlive-combined-medium-2023-final/share/texmf-var/web2c/texmf.cnf" 1 43219 6b1f0fa49894551b3a7070cb56cbe098 ""
@@ -188,11 +188,13 @@
   "/nix/store/sxjgkpc9kb1h5ny43hs5ijpwy9yi4ywh-texlive-combined-medium-2023-final-texmfdist/tex/latex/translator/translator.sty" 1 8765 56d370785f0143111ff9898b5adfe08e ""
   "/nix/store/sxjgkpc9kb1h5ny43hs5ijpwy9yi4ywh-texlive-combined-medium-2023-final-texmfdist/tex/latex/url/url.sty" 1 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "/nix/store/sxjgkpc9kb1h5ny43hs5ijpwy9yi4ywh-texlive-combined-medium-2023-final-texmfdist/tex/latex/xcolor/xcolor.sty" 1 55487 80a65caedd3722f4c20a14a69e785d8f ""
-  "main.aux" 1727797780.05259 2723 42903a2b7c2af1db76a067f64276cd9a "pdflatex"
-  "main.nav" 1727797780.05359 1699 774ba1f475208e5778799c65979aba7e "pdflatex"
-  "main.out" 1727797780.05359 388 53438eab0da8ff4ee099721680d6a326 "pdflatex"
-  "main.tex" 1727797777.60556 3631 ef7d87bfdb22396872e23f2bf8cfc444 ""
-  "main.toc" 1727797780.05359 159 2b6176030cdaebb638444e714137e22d "pdflatex"
+  "figs/barabasi-cancer.png" 1727806275.68315 156352 7ea1434535d573c553b9a9818b873276 ""
+  "figs/barabasi-hypertension.png" 1727806107.03139 698833 975c4c566a7cfee987c66ab23b1593bd ""
+  "main.aux" 1727808297.44216 3187 e9a9dcfd81ff72f68b8ba55b4bab8b73 "pdflatex"
+  "main.nav" 1727808297.44316 1988 262bb306b174a0cc0b5546d8794869ce "pdflatex"
+  "main.out" 1727808297.44316 593 9f42c2c3b7ba8ad935f520d5bcb5730f "pdflatex"
+  "main.tex" 1727808295.31113 4508 9e472a9c8110bab2bbe180ed39bf8fb0 ""
+  "main.toc" 1727808297.44316 226 de32a7040534bce85df70b29fe1b0118 "pdflatex"
   (generated)
   "main.aux"
   "main.log"
