@@ -1,0 +1,22 @@
+\begin{thebibliography}{1}
+
+\bibitem{MIMA-Gray-2022}
+Identifying drug combinations that enhance treatment responses mediated by the tumor microenvironment.
+\newblock {\em Nature Biotechnology}, 40(12):1770--1771, December 2022.
+
+\bibitem{Cheng2019}
+Feixiong Cheng, Istvan~A. Kovacs, and Albert-Laszlo Barabasi.
+\newblock Network-based prediction of drug combinations.
+\newblock {\em Nature Communications}, 10(1):1197, March 2019.
+
+\bibitem{Diaz2020-bi}
+Jennifer~El Diaz, Mehmet~Eren Ahsen, Thomas Schaffter, Xintong Chen, Ronald~B Realubit, Charles Karan, Andrea Califano, Bojan Losic, and Gustavo Stolovitzky.
+\newblock The transcriptomic response of cells to a drug combination is more than the sum of the responses to the monotherapies.
+\newblock {\em Elife}, 9, September 2020.
+
+\bibitem{Mathur2022}
+L.~Mathur, B.~Szalai, N.~H. Du, R.~Utharala, M.~Ballinger, J.~J.~M. Landry, M.~Ryckelynck, V.~Benes, J.~Saez-Rodriguez, and C.~A. Merten.
+\newblock Combi-seq for multiplexed transcriptome-based profiling of drug combinations using deterministic barcoding in single-cell droplets.
+\newblock {\em Nature Communications}, 13(1):4450, August 2022.
+
+\end{thebibliography}

@@ -1,14 +1,31 @@
 \documentclass{beamer}
 
 \author{AJ Fagan}
-\title{Network Synergy Project Intro}
+\title{Network Synergy Recent Papers}
 \date{October 4, 2024}
 
 \usepackage{graphicx}
-\graphicspath{ { ./figs } }
+\usepackage{subcaption}
+%\graphicspath{ { ./figs } }
 
 \usetheme{Madrid}
 \usecolortheme{beaver}
+
+
+
+
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Table of Contents}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+
+%\usepackage[backend=biber, natbib=true]{biblatex}
+\bibliographystyle{plain}
+%\addbibresource{main.bib}
 
 \begin{document}
 
@@ -17,125 +34,176 @@
 
 \begin{frame}
   \frametitle{Table of Contents}
-  \tableofcontents
+  \tableofcontents 
 \end{frame}
 
 \section{Drug Synergy}
 
 \begin{frame}
   \frametitle{Synergy via Potency}
-  Just a simple visualization of Bliss Synergy.
+  \begin{figure}[!htb]
+      \centering 
+      \begin{minipage}[b]{0.49\textwidth}
+	\begin{subfigure}[b]{\textwidth}
+	  \centering
+	  \includegraphics[width=\linewidth]{figs/mono-dose-resp.png}
+	\end{subfigure}\vfill
+	\begin{subfigure}[c]{\textwidth}
+	  \centering
+	  \includegraphics[width=\linewidth]{figs/ato-bru-resp-heatmap.png}
+	\end{subfigure}
+      \end{minipage}\hfill
+      \begin{minipage}[b]{0.49\textwidth}
+	\vfill
+	\includegraphics[width=\textwidth]{figs/ato-bru-bliss-heatmap.png}
+	\vfill
+      \end{minipage}
+  \end{figure}
 \end{frame}
 
 \begin{frame}
   \frametitle{Promises of Synergistic Combinations}
-  \begin{itemize}
-    \item Overcoming chemoresistance 
-    \item Repurposing existing drugs
-    \item Increasing efficacy
-    \item Reducing toxicity
-  \end{itemize}
+  The promises associated with synergistic drug combinations are:
+  \begin{center}
+    \begin{itemize}
+      \item Overcoming chemoresistance \only<2>{\checkmark} 
+      \item Repurposing existing drugs \only<2>{\checkmark}
+      \item Increasing efficacy \only<2>{\checkmark}
+      \item \alert<2>{Reducing toxicity}
+    \end{itemize}
+  \end{center}
 
-  And then I do the bit where I say that potency synergy only actually enables consideration of the first 3.    
 \end{frame}
 
 \begin{frame}
   \frametitle{Relevant XKCD}
-  XKCD comic about killing cancer cells with a handgun.
 
-  Other avenues are needed to more accurately predict clinical benefits of drug combinations in early in vitro experiments.
+  \begin{figure}[!htb]
+    \includegraphics[width=0.4\textwidth]{figs/xkcd-cells.png}
+  \end{figure}
 \end{frame}
-
-
-\section{Network Synergy}
 
 \begin{frame}
   \frametitle{Synergy via Biological Networks}
-  Consider the effects of drugs on a biological network, such as a GRN.
+  Goal: describe the mechanism, rather than the strength, of interaction between two drugs.
+  \vfill
+  \begin{figure}
+    \centering
+    \minipage{0.4\textwidth}
+      \includegraphics[width=\linewidth]{figs/barabasi-hypertension-overlapping-net.png}
+    \endminipage\hfill 
+    \minipage{0.59\textwidth}
+      \includegraphics[width=\linewidth]{figs/TME_example.png}
+    \endminipage
+  \end{figure}
+\end{frame}
 
-  Image of a network.
+\section{Network Synergy via Modules}
 
-  Enables qualitative assessment of drug interaction.
+
+\begin{frame}
+  \frametitle{Module Approach}
+  \begin{figure}[!htb]
+    \includegraphics[width=\linewidth]{figs/barabasi-hypertension-overlapping.png}
+  \end{figure}
+  \small{\textit{Network-based prediction of drug combinations}, Cheng, Kovacs, Barabasi, 2019}~\cite{Cheng2019} 
 \end{frame}
 
 \begin{frame}
   \frametitle{Module Approach}
   \begin{figure}[!htb]
-    \minipage{0.4\textwidth}
-      \includegraphics[width=\linewidth, height=200]{figs/barabasi-hypertension}
-    \endminipage
-    \minipage{0.4\textwidth}
-      \includegraphics[width=\linewidth, height=200]{figs/barabasi-cancer.png}
+    \minipage{0.48\textwidth}
+      \includegraphics[width=\linewidth]{figs/barabasi-hypertension_a-c.png}
+    \endminipage\hfill 
+    \minipage{0.48\textwidth}
+      \includegraphics[width=\linewidth]{figs/barabasi-hypertension_d-f.png}
     \endminipage
   \end{figure}
+  \small{\textit{Network-based prediction of drug combinations}, Cheng, Kovacs, Barabasi, 2019}~\cite{Cheng2019} 
+\end{frame}
+
+
+
+\section{Synergy in Transcriptional Profiles}
+
+\begin{frame}
+  \frametitle{Synergy in Transcriptional Profiles}
+  \begin{figure}[!htb] 
+    \includegraphics[width=0.6\textwidth]{figs/transcriptomic-synergy.jpg}
+  \end{figure}
+  \small{\textit{The transcriptomic response of cells to a drug combination is more than the sum of the responses to the monotherapies}, Diaz et. al., 2020}~\cite{Diaz2020-bi}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Module Approach - Further Directions}
-  The Barabasi paper only really discusses efficacy of the principles via approved drug combinations --- biased.
-  \vfill
-  Try to expand on this method by:
-  \begin{itemize}
-      \item Performing network analysis of drug combinations (0, A, B, AB) in various principles.
-      \item Considering \underline{T}umor \underline{M}icro\underline{e}nvironments (TMEs).
-      \item Similarity scores were reduced to binary $\geq0$ or $<0$ --- do smaller/larger similarity scores make a difference?
-  \end{itemize}
+  \frametitle{Synergistically Expressed Genes in GSEA}
+  \begin{figure}[!htb]
+    \includegraphics[width=0.8\textwidth]{figs/transcriptomic-synergy-gsea.jpg}
+  \end{figure}
+  \small{\textit{The transcriptomic response of cells to a drug combination is more than the sum of the responses to the monotherapies}, Diaz et. al., 2020}~\cite{Diaz2020-bi}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Quantitative Approach}
+  \frametitle{Transcription Cascade of Differentially Active TFs}
+  \begin{figure}[!htb]
+    \minipage{0.48\textwidth}
+      \includegraphics[width=\linewidth]{figs/transcription-cascade_a.jpg}
+    \endminipage\hfill 
+    \minipage{0.48\textwidth}
+      \includegraphics[width=\linewidth]{figs/transcription-cascade_b.jpg}
+    \endminipage
+  \end{figure}
+  \small{\textit{The transcriptomic response of cells to a drug combination is more than the sum of the responses to the monotherapies}, Diaz et. al., 2020}~\cite{Diaz2020-bi}
+\end{frame}
 
-  Apply the concepts of Potency Synergy onto biological networks.
-
-  \begin{itemize}
-    \item Which genes/proteins/metabolites are over/under-active in the combination, relative to what we would expect from the monotherapies?
-    \item GSEA $\Rightarrow$ Which cell functions are over/under-active?
-  \end{itemize}
-
-  \vfill
-
-  Does this method provide any benefit over the Module Approach? What is the drug module of AB --- is it greater than A $\cup$ B?
+\begin{frame}
+  \frametitle{The Sham-Combination Principle}
+  \begin{block}{The Sham-Combination Principle} 
+    A drug combined with itself should be additive.
+  \end{block}
+  \begin{figure}[!htb]
+    \includegraphics[width=0.8\textwidth]{figs/transcriptomic-synergy-sham_failure.jpg}
+  \end{figure}
+  \small{\textit{The transcriptomic response of cells to a drug combination is more than the sum of the responses to the monotherapies}, Diaz et. al., 2020}~\cite{Diaz2020-bi}
 \end{frame}
 
 \section{Tumor Microenvironments}
 
 \begin{frame}
-  \frametitle{Network Synergy in TMEs}
-  Cancer cells are not the only part of the tissue that contribute to cancer activity.
-
-  Reinclude fig from "Module Approach"
-
-  TMEs may expand and specialize the disease module into modules $D_1, \ldots D_K$. 
-  What network principles do we see with these TME modules?
-\end{frame}
-
-\begin{frame}
   \frametitle{Multiplex Implantable Microdevice Assay}
-  (This is the Joe Gray paper)
-
-  Utilizes spatial analysis of the TME to predict efficacious combinations of targeted/chemotherapeutic drugs with immunotherapy.
-
-  \vfill
-
-  "multiplex immunostaining and imaging process that measures the expression levels of $>30$ different protein markers in each cell. Computational analysis of the resulting multiplex images provided information about drug-induced changes in the compositions, functional states and organizations of the tumor and TME cells. These measurements provided mechanistic insights that were used to select drug combinations that were predicted to be effective when administered systemically. These combinations included targeting treatment-resistant cancer stem cells."
-  
-  \vfill
-  
-  Never mentions networks. What principles are exhibited in these data? 
+  %\begin{figure}[!htb]
+    \minipage{0.43\textwidth}
+      \includegraphics[width=\linewidth]{figs/TME_example.png}
+    \endminipage\hfill
+    \minipage{0.53\textwidth}
+      \begin{itemize}
+	\item An Implantable Microdevice (IMD) emits a small amount of several types of drugs into spatially separated regions of the tissue 
+	\item Multiplexed Immunohistochemical (mIHC) stainings enable spatial analysis of the TME's response to each treatment 
+	\item Synergisic treatment combinations, such as immunotherapies, can be predicted from the results
+      \end{itemize}
+    \endminipage\vfill
+    \small{\textit{Identifying drug combinations that enhance treatment responses mediated by the tumor microenvironment}, Tatarova, Jonas, and Gray, 2022}~\cite{MIMA-Gray-2022}
+  %\end{figure}
 \end{frame}
+ 
 
-\section{Prediction of in vivo efficacy}
+
+\section{Available Data}
 
 \begin{frame}
-  \frametitle{Predicting in vivo efficacy}
-  More generally, the goal of this project is to develop a metric that is:
+  \frametitle{Available Data}
   \begin{itemize}
-    \item Inexpensive to obtain
-    \item Simple to calculate
-    \item Predictive of \textit{in vivo} outcomes
+    \item Time-course bulk RNA-Seq of Tamoxifin, Withaferin, and Mefloquine in different doses, including pairwise combinations 
+    \item Drug targets for 42 drugs, and 73 experimentally verified combinations of them 
+    \item Various mIHC and/or cycIF imaging from murine breast cancer models 
+    \item \alert{``Combi-seq'' (bulk RNA-seq, but for many drug combinations) data for 420 drug combinations}~\cite{Mathur2022}
   \end{itemize}
-
-  As a result, would likely need either to conduct \textit{in vivo} (e.g. murine) studies, or try to utilize existing data. 
 \end{frame}
 
+\medskip
+
+\begin{frame}[allowframebreaks]
+  \frametitle{References}
+  %\printbibliography
+  \bibliography{main}
+\end{frame}
 \end{document}
