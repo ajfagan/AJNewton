@@ -644,7 +644,7 @@ server <- function(input, output, session) {
           }
           labels
         },
-        breaks = seq(-max(abs(df$log2FoldChange), na.rm = T), max(abs(df$log2FoldChange), na.rm=T), length.out = 5)
+        breaks = seq(-max(abs(df$log2FoldChange), na.rm = T), max(abs(df$log2FoldChange), na.rm=T), length.out = 101)
       )
     }, width = reactive({input$plotWidth}), height = reactive({input$plotHeight})) 
       
