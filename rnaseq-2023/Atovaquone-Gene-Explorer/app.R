@@ -643,7 +643,8 @@ server <- function(input, output, session) {
             labels <- c(labels, input[[paste("heatmap_label_", coldata[i, "Dose (μM)"], "-", coldata[i, "Time (hours)"], sep = "")]])
           }
           labels
-        }
+        },
+        breaks = seq(-max(abs(df$log2FoldChange), na.rm = T), max(abs(df$log2FoldChange), na.rm=T), length.out = 5)
       )
     }, width = reactive({input$plotWidth}), height = reactive({input$plotHeight})) 
       

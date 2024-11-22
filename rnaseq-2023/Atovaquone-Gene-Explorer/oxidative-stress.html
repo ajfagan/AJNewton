@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html class=""><head><script type="text/javascript">
+    (function() {
+      var container = document.querySelector('#_tcx-u1gksmkdbsk');
+      if (!container) {
+        return;
+      }
+
+      function addToContainer(url, text) {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tcx-url', url);
+        wrapper.innerText = text;
+        container.appendChild(wrapper);
+      }
+
+      const fetch = window.fetch
+      window.fetch = function() {
+        return Promise.resolve(fetch.apply(window, arguments))
+            .then(async response => {
+              if (response.ok) {
+                try {
+                  const clone = response.clone();
+                  const json = await clone.json();
+                  addToContainer(clone.url, JSON.stringify(json));
+                } catch (err) {}
+              }
+              return response;
+            });
+      };
+
+      var XHR = XMLHttpRequest.prototype;
+      var send = XHR.send;
+      var open = XHR.open;
+      XHR.open = function(method, url) {
+        this.url = url;
+        return open.apply(this, arguments);
+      };
+      XHR.send = function() {
+        this.addEventListener('load', function() {
+          try {
+            const response = this.response;
+            if (response && response.length) {
+              const firstChar = response[0];
+              if (firstChar === '[' || firstChar === '{') {
+                addToContainer(this.url, response);
+              }
+            }
+          } catch (err) {
+            // No-op.
+          }
+        });
+        return send.apply(this, arguments);
+      };
+    })();
+  </script>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <script type="application/shiny-singletons"></script>
+  <script type="application/html-dependencies">jquery[3.6.0];shiny-css[1.8.0];shiny-javascript[1.8.0];selectize[0.15.2];ionrangeslider-javascript[2.3.1];strftime[0.9.2];ionrangeslider-css[2.3.1];colourpicker-binding[1.3.0];colourpicker-lib[1.6];datatables[1.10.5];datatables-bootstrap[1.10.5];htmltools-fill[0.5.8.1];bslib-component-js[0.8.0];bslib-component-css[0.8.0];bslib-tag-require[0.8.0];bootstrap[3.4.1]</script>
+<script src="oxidative-stress_files/jquery.min.js"></script>
+<link href="oxidative-stress_files/shiny.min.css" rel="stylesheet">
+<script src="oxidative-stress_files/shiny.min.js"></script>
+<link href="oxidative-stress_files/selectize.bootstrap3.css" rel="stylesheet">
+<script src="oxidative-stress_files/selectize.min.js"></script>
+<script src="oxidative-stress_files/selectize-plugin-a11y.min.js"></script>
+<script src="oxidative-stress_files/ion.rangeSlider.min.js"></script>
+<script src="oxidative-stress_files/strftime-min.js"></script>
+<link href="oxidative-stress_files/ion.rangeSlider.css" rel="stylesheet">
+<script src="oxidative-stress_files/input_binding_colour.js"></script>
+<link href="oxidative-stress_files/colourpicker.min.css" rel="stylesheet">
+<script src="oxidative-stress_files/colourpicker.min.js"></script>
+<script src="oxidative-stress_files/jquery.dataTables.min.js"></script>
+<link href="oxidative-stress_files/dataTables.bootstrap.css" rel="stylesheet">
+<link href="oxidative-stress_files/dataTables.extra.css" rel="stylesheet">
+<script src="oxidative-stress_files/dataTables.bootstrap.js"></script>
+<link href="oxidative-stress_files/fill.css" rel="stylesheet">
+<script src="oxidative-stress_files/components.min.js"></script>
+<script src="oxidative-stress_files/web-components.min.js" type="module"></script>
+<link href="oxidative-stress_files/components.css" rel="stylesheet">
+<script src="oxidative-stress_files/tag-require.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="oxidative-stress_files/bootstrap.min.css" rel="stylesheet">
+<link href="oxidative-stress_files/bootstrap-accessibility.min.css" rel="stylesheet">
+<script src="oxidative-stress_files/bootstrap.min.js"></script>
+<script src="oxidative-stress_files/bootstrap-accessibility.min.js"></script>  <title>Visualization of Gene-level Results for Atovaquone RNA-Seq Analysis</title>
+</head>
+<body>
+  <div class="container-fluid">
+    <h2>Visualization of Gene-level Results for Atovaquone RNA-Seq Analysis</h2>
+    <div class="form-group shiny-input-container">
+      <label class="control-label" id="saveStateLocation-label" for="saveStateLocation">Save/Load location</label>
+      <div class="input-group">
+        <label class="input-group-btn input-group-prepend">
+          <span class="btn btn-default btn-file">
+            Browse...
+            <input id="saveStateLocation" class="shiny-input-file shiny-bound-input" name="saveStateLocation" type="file" style="position: absolute !important; top: -99999px !important; left: -99999px !important;">
+          </span>
+        </label>
+        <input type="text" class="form-control" placeholder="No file selected" readonly="readonly">
+      </div>
+      <div id="saveStateLocation_progress" class="progress active shiny-file-input-progress">
+        <div class="progress-bar"></div>
+      </div>
+    </div>
+    <button id="loadSaveState" type="button" class="btn btn-default action-button shiny-bound-input">Load Save State</button>
+    <button id="saveState" type="button" class="btn btn-default action-button shiny-bound-input">Save State</button>
+    <div class="row">
+      <div class="col-sm-2">
+        <form class="well" role="complementary">
+          <div class="shiny-input-panel">
+            <div class="shiny-flow-layout">
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="PlotTreatments-label" for="PlotTreatments-selectized">Select Treatments</label>
+                  <div>
+                    <select id="PlotTreatments" class="shiny-input-select selectized shiny-bound-input" multiple="multiple" tabindex="-1" style="display: none;" aria-live="polite"><option value="30" selected="selected">30</option><option value="45" selected="selected">45</option></select><div class="shiny-input-select selectize-control multi plugin-selectize-plugin-a11y"><div class="selectize-input items not-full has-options has-items"><div class="item" data-value="30">30</div><div class="item" data-value="45">45</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="PlotTreatments-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="xini5npnrp"></div><div class="multi selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none; width: 100%; min-width: 208px; top: 34px; left: 0px;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="xini5npnrp"></div></div></div>
+                    <script type="application/json" data-for="PlotTreatments">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="shiny-input-panel">
+            <div class="shiny-flow-layout">
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="PlotTimes-label" for="PlotTimes-selectized">Select Times</label>
+                  <div>
+                    <select id="PlotTimes" class="shiny-input-select selectized shiny-bound-input" multiple="multiple" tabindex="-1" style="display: none;" aria-live="polite"><option value="8" selected="selected">8</option><option value="24" selected="selected">24</option><option value="48" selected="selected">48</option></select><div class="shiny-input-select selectize-control multi plugin-selectize-plugin-a11y"><div class="selectize-input items not-full has-options has-items"><div class="item" data-value="8">8</div><div class="item" data-value="24">24</div><div class="item" data-value="48">48</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="PlotTimes-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="3k0k6uiwtn"></div><div class="multi selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none; width: 100%; min-width: 208px; top: 34px; left: 0px;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="3k0k6uiwtn"><div class="option" data-selectable="" data-value="1">1</div></div></div></div>
+                    <script type="application/json" data-for="PlotTimes">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group shiny-input-container">
+            <label class="control-label" id="nsets-label" for="nsets">Number of Gene Sets to Plot</label>
+            <input id="nsets" type="number" class="shiny-input-number form-control shiny-bound-input" value="1" min="1">
+          </div>
+        </form>
+      </div>
+      <div class="col-sm-8" role="main">
+        <div id="setBuilder" class="shiny-html-output shiny-bound-output" aria-live="polite"><div class="row">
+  <div class="col-sm-4">
+    <form class="well" role="complementary">
+      <div class="form-group shiny-input-container">
+        <label class="control-label" id="PlotGenesLabel1-label" for="PlotGenesLabel1">Gene Set 1 Name:</label>
+        <input id="PlotGenesLabel1" type="text" class="shiny-input-text form-control shiny-bound-input" value="Gene Set 1">
+      </div>
+    </form>
+  </div>
+  <div class="col-sm-8" role="main">
+    <div class="shiny-input-panel">
+      <div class="shiny-flow-layout">
+        <div>
+          <div class="form-group shiny-input-container">
+            <label class="control-label" id="PlotGenes1-label" for="PlotGenes1-selectized">Select Genes in Set 1</label>
+            <div>
+              <select class="shiny-input-select form-control selectized shiny-bound-input" id="PlotGenes1" multiple="multiple" tabindex="-1" style="display: none;" aria-live="polite"></select><div class="shiny-input-select form-control selectize-control multi plugin-selectize-plugin-a11y"><div class="selectize-input items not-full"><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="PlotGenes1-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="fgcwaf7fiw"></div><div class="multi selectize-dropdown shiny-input-select form-control plugin-selectize-plugin-a11y" style="display: none; width: 100%; min-width: 208px; top: 34px; left: 0px;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="fgcwaf7fiw"><div class="option active" data-selectable="" data-value="A1BG">A1BG</div><div class="option" data-selectable="" data-value="A1BG-AS1">A1BG-AS1</div><div class="option" data-selectable="" data-value="A1CF">A1CF</div><div class="option" data-selectable="" data-value="A2M">A2M</div><div class="option" data-selectable="" data-value="A2M-AS1">A2M-AS1</div><div class="option" data-selectable="" data-value="A2ML1">A2ML1</div><div class="option" data-selectable="" data-value="A3GALT2">A3GALT2</div><div class="option" data-selectable="" data-value="A4GALT">A4GALT</div><div class="option" data-selectable="" data-value="A4GNT">A4GNT</div><div class="option" data-selectable="" data-value="AAAS">AAAS</div><div class="option" data-selectable="" data-value="AACS">AACS</div><div class="option" data-selectable="" data-value="AACSP1">AACSP1</div><div class="option" data-selectable="" data-value="AADAC">AADAC</div><div class="option" data-selectable="" data-value="AADACL2">AADACL2</div><div class="option" data-selectable="" data-value="AADACL3">AADACL3</div><div class="option" data-selectable="" data-value="AADACP1">AADACP1</div><div class="option" data-selectable="" data-value="AADAT">AADAT</div><div class="option" data-selectable="" data-value="AAGAB">AAGAB</div><div class="option" data-selectable="" data-value="AAK1">AAK1</div><div class="option" data-selectable="" data-value="AAMDC">AAMDC</div><div class="option" data-selectable="" data-value="AAMP">AAMP</div><div class="option" data-selectable="" data-value="AANAT">AANAT</div><div class="option" data-selectable="" data-value="AAR2">AAR2</div><div class="option" data-selectable="" data-value="AARD">AARD</div><div class="option" data-selectable="" data-value="AARS1">AARS1</div><div class="option" data-selectable="" data-value="AARS2">AARS2</div><div class="option" data-selectable="" data-value="AARSD1">AARSD1</div><div class="option" data-selectable="" data-value="AARSD1P1">AARSD1P1</div><div class="option" data-selectable="" data-value="AASDH">AASDH</div><div class="option" data-selectable="" data-value="AASDHPPT">AASDHPPT</div><div class="option" data-selectable="" data-value="AASS">AASS</div><div class="option" data-selectable="" data-value="AATBC">AATBC</div><div class="option" data-selectable="" data-value="AATF">AATF</div><div class="option" data-selectable="" data-value="AATK">AATK</div><div class="option" data-selectable="" data-value="ABALON">ABALON</div><div class="option" data-selectable="" data-value="ABAT">ABAT</div><div class="option" data-selectable="" data-value="ABCA1">ABCA1</div><div class="option" data-selectable="" data-value="ABCA10">ABCA10</div><div class="option" data-selectable="" data-value="ABCA11P">ABCA11P</div><div class="option" data-selectable="" data-value="ABCA12">ABCA12</div><div class="option" data-selectable="" data-value="ABCA13">ABCA13</div><div class="option" data-selectable="" data-value="ABCA17P">ABCA17P</div><div class="option" data-selectable="" data-value="ABCA2">ABCA2</div><div class="option" data-selectable="" data-value="ABCA3">ABCA3</div><div class="option" data-selectable="" data-value="ABCA4">ABCA4</div><div class="option" data-selectable="" data-value="ABCA5">ABCA5</div><div class="option" data-selectable="" data-value="ABCA6">ABCA6</div><div class="option" data-selectable="" data-value="ABCA7">ABCA7</div><div class="option" data-selectable="" data-value="ABCA8">ABCA8</div><div class="option" data-selectable="" data-value="ABCA9">ABCA9</div><div class="option" data-selectable="" data-value="ABCB1">ABCB1</div><div class="option" data-selectable="" data-value="ABCB10">ABCB10</div><div class="option" data-selectable="" data-value="ABCB11">ABCB11</div><div class="option" data-selectable="" data-value="ABCB4">ABCB4</div><div class="option" data-selectable="" data-value="ABCB5">ABCB5</div><div class="option" data-selectable="" data-value="ABCB6">ABCB6</div><div class="option" data-selectable="" data-value="ABCB7">ABCB7</div><div class="option" data-selectable="" data-value="ABCB8">ABCB8</div><div class="option" data-selectable="" data-value="ABCB9">ABCB9</div><div class="option" data-selectable="" data-value="ABCC1">ABCC1</div><div class="option" data-selectable="" data-value="ABCC10">ABCC10</div><div class="option" data-selectable="" data-value="ABCC11">ABCC11</div><div class="option" data-selectable="" data-value="ABCC12">ABCC12</div><div class="option" data-selectable="" data-value="ABCC13">ABCC13</div><div class="option" data-selectable="" data-value="ABCC2">ABCC2</div><div class="option" data-selectable="" data-value="ABCC3">ABCC3</div><div class="option" data-selectable="" data-value="ABCC4">ABCC4</div><div class="option" data-selectable="" data-value="ABCC5">ABCC5</div><div class="option" data-selectable="" data-value="ABCC5-AS1">ABCC5-AS1</div><div class="option" data-selectable="" data-value="ABCC6">ABCC6</div><div class="option" data-selectable="" data-value="ABCC6P1">ABCC6P1</div><div class="option" data-selectable="" data-value="ABCC6P2">ABCC6P2</div><div class="option" data-selectable="" data-value="ABCC8">ABCC8</div><div class="option" data-selectable="" data-value="ABCC9">ABCC9</div><div class="option" data-selectable="" data-value="ABCD1">ABCD1</div><div class="option" data-selectable="" data-value="ABCD2">ABCD2</div><div class="option" data-selectable="" data-value="ABCD3">ABCD3</div><div class="option" data-selectable="" data-value="ABCD4">ABCD4</div><div class="option" data-selectable="" data-value="ABCE1">ABCE1</div><div class="option" data-selectable="" data-value="ABCF1">ABCF1</div><div class="option" data-selectable="" data-value="ABCF2">ABCF2</div><div class="option" data-selectable="" data-value="ABCF2-H2BK1">ABCF2-H2BK1</div><div class="option" data-selectable="" data-value="ABCF2P1">ABCF2P1</div><div class="option" data-selectable="" data-value="ABCF3">ABCF3</div><div class="option" data-selectable="" data-value="ABCG1">ABCG1</div><div class="option" data-selectable="" data-value="ABCG2">ABCG2</div><div class="option" data-selectable="" data-value="ABCG4">ABCG4</div><div class="option" data-selectable="" data-value="ABCG5">ABCG5</div><div class="option" data-selectable="" data-value="ABCG8">ABCG8</div><div class="option" data-selectable="" data-value="ABHD1">ABHD1</div><div class="option" data-selectable="" data-value="ABHD10">ABHD10</div><div class="option" data-selectable="" data-value="ABHD11">ABHD11</div><div class="option" data-selectable="" data-value="ABHD12">ABHD12</div><div class="option" data-selectable="" data-value="ABHD12B">ABHD12B</div><div class="option" data-selectable="" data-value="ABHD13">ABHD13</div><div class="option" data-selectable="" data-value="ABHD14A">ABHD14A</div><div class="option" data-selectable="" data-value="ABHD14A-ACY1">ABHD14A-ACY1</div><div class="option" data-selectable="" data-value="ABHD14B">ABHD14B</div><div class="option" data-selectable="" data-value="ABHD15">ABHD15</div><div class="option" data-selectable="" data-value="ABHD16A">ABHD16A</div><div class="option" data-selectable="" data-value="ABHD16B">ABHD16B</div><div class="option" data-selectable="" data-value="ABHD17A">ABHD17A</div><div class="option" data-selectable="" data-value="ABHD17B">ABHD17B</div><div class="option" data-selectable="" data-value="ABHD17C">ABHD17C</div><div class="option" data-selectable="" data-value="ABHD18">ABHD18</div><div class="option" data-selectable="" data-value="ABHD2">ABHD2</div><div class="option" data-selectable="" data-value="ABHD3">ABHD3</div><div class="option" data-selectable="" data-value="ABHD4">ABHD4</div><div class="option" data-selectable="" data-value="ABHD5">ABHD5</div><div class="option" data-selectable="" data-value="ABHD6">ABHD6</div><div class="option" data-selectable="" data-value="ABHD8">ABHD8</div><div class="option" data-selectable="" data-value="ABI1">ABI1</div><div class="option" data-selectable="" data-value="ABI2">ABI2</div><div class="option" data-selectable="" data-value="ABI3">ABI3</div><div class="option" data-selectable="" data-value="ABI3BP">ABI3BP</div><div class="option" data-selectable="" data-value="ABITRAM">ABITRAM</div><div class="option" data-selectable="" data-value="ABL1">ABL1</div><div class="option" data-selectable="" data-value="ABL2">ABL2</div><div class="option" data-selectable="" data-value="ABLIM1">ABLIM1</div><div class="option" data-selectable="" data-value="ABLIM2">ABLIM2</div><div class="option" data-selectable="" data-value="ABLIM3">ABLIM3</div><div class="option" data-selectable="" data-value="ABO">ABO</div><div class="option" data-selectable="" data-value="ABR">ABR</div><div class="option" data-selectable="" data-value="ABRA">ABRA</div><div class="option" data-selectable="" data-value="ABRACL">ABRACL</div><div class="option" data-selectable="" data-value="ABRAXAS1">ABRAXAS1</div><div class="option" data-selectable="" data-value="ABRAXAS1P1">ABRAXAS1P1</div><div class="option" data-selectable="" data-value="ABRAXAS2">ABRAXAS2</div><div class="option" data-selectable="" data-value="ABT1">ABT1</div><div class="option" data-selectable="" data-value="ABTB1">ABTB1</div><div class="option" data-selectable="" data-value="ABTB2">ABTB2</div><div class="option" data-selectable="" data-value="ABTB3">ABTB3</div><div class="option" data-selectable="" data-value="ACAA1">ACAA1</div><div class="option" data-selectable="" data-value="ACAA2">ACAA2</div><div class="option" data-selectable="" data-value="ACAA2P1">ACAA2P1</div><div class="option" data-selectable="" data-value="ACACA">ACACA</div><div class="option" data-selectable="" data-value="ACACB">ACACB</div><div class="option" data-selectable="" data-value="ACAD10">ACAD10</div><div class="option" data-selectable="" data-value="ACAD11">ACAD11</div><div class="option" data-selectable="" data-value="ACAD8">ACAD8</div><div class="option" data-selectable="" data-value="ACAD9">ACAD9</div><div class="option" data-selectable="" data-value="ACADL">ACADL</div><div class="option" data-selectable="" data-value="ACADM">ACADM</div><div class="option" data-selectable="" data-value="ACADS">ACADS</div><div class="option" data-selectable="" data-value="ACADSB">ACADSB</div><div class="option" data-selectable="" data-value="ACADVL">ACADVL</div><div class="option" data-selectable="" data-value="ACAN">ACAN</div><div class="option" data-selectable="" data-value="ACAP1">ACAP1</div><div class="option" data-selectable="" data-value="ACAP2">ACAP2</div><div class="option" data-selectable="" data-value="ACAP3">ACAP3</div><div class="option" data-selectable="" data-value="ACAT1">ACAT1</div><div class="option" data-selectable="" data-value="ACAT2">ACAT2</div><div class="option" data-selectable="" data-value="ACBD3">ACBD3</div><div class="option" data-selectable="" data-value="ACBD3-AS1">ACBD3-AS1</div><div class="option" data-selectable="" data-value="ACBD4">ACBD4</div><div class="option" data-selectable="" data-value="ACBD5">ACBD5</div><div class="option" data-selectable="" data-value="ACBD6">ACBD6</div><div class="option" data-selectable="" data-value="ACBD7">ACBD7</div><div class="option" data-selectable="" data-value="ACCS">ACCS</div><div class="option" data-selectable="" data-value="ACD">ACD</div><div class="option" data-selectable="" data-value="ACE">ACE</div><div class="option" data-selectable="" data-value="ACE2">ACE2</div><div class="option" data-selectable="" data-value="ACE2-DT">ACE2-DT</div><div class="option" data-selectable="" data-value="ACER2">ACER2</div><div class="option" data-selectable="" data-value="ACER3">ACER3</div><div class="option" data-selectable="" data-value="ACHE">ACHE</div><div class="option" data-selectable="" data-value="ACIN1">ACIN1</div><div class="option" data-selectable="" data-value="ACKR2">ACKR2</div><div class="option" data-selectable="" data-value="ACKR3">ACKR3</div><div class="option" data-selectable="" data-value="ACKR4">ACKR4</div><div class="option" data-selectable="" data-value="ACLY">ACLY</div><div class="option" data-selectable="" data-value="ACMSD">ACMSD</div><div class="option" data-selectable="" data-value="ACO1">ACO1</div><div class="option" data-selectable="" data-value="ACO2">ACO2</div><div class="option" data-selectable="" data-value="ACOT1">ACOT1</div><div class="option" data-selectable="" data-value="ACOT11">ACOT11</div><div class="option" data-selectable="" data-value="ACOT12">ACOT12</div><div class="option" data-selectable="" data-value="ACOT13">ACOT13</div><div class="option" data-selectable="" data-value="ACOT2">ACOT2</div><div class="option" data-selectable="" data-value="ACOT4">ACOT4</div><div class="option" data-selectable="" data-value="ACOT6">ACOT6</div><div class="option" data-selectable="" data-value="ACOT7">ACOT7</div><div class="option" data-selectable="" data-value="ACOT8">ACOT8</div><div class="option" data-selectable="" data-value="ACOT9">ACOT9</div><div class="option" data-selectable="" data-value="ACOX1">ACOX1</div><div class="option" data-selectable="" data-value="ACOX2">ACOX2</div><div class="option" data-selectable="" data-value="ACOX3">ACOX3</div><div class="option" data-selectable="" data-value="ACOXL">ACOXL</div><div class="option" data-selectable="" data-value="ACOXL-AS1">ACOXL-AS1</div><div class="option" data-selectable="" data-value="ACP1">ACP1</div><div class="option" data-selectable="" data-value="ACP2">ACP2</div><div class="option" data-selectable="" data-value="ACP3">ACP3</div><div class="option" data-selectable="" data-value="ACP4">ACP4</div><div class="option" data-selectable="" data-value="ACP5">ACP5</div><div class="option" data-selectable="" data-value="ACP6">ACP6</div><div class="option" data-selectable="" data-value="ACP7">ACP7</div><div class="option" data-selectable="" data-value="ACR">ACR</div><div class="option" data-selectable="" data-value="ACRBP">ACRBP</div><div class="option" data-selectable="" data-value="ACRP1">ACRP1</div><div class="option" data-selectable="" data-value="ACRV1">ACRV1</div><div class="option" data-selectable="" data-value="ACSBG1">ACSBG1</div><div class="option" data-selectable="" data-value="ACSBG2">ACSBG2</div><div class="option" data-selectable="" data-value="ACSF2">ACSF2</div><div class="option" data-selectable="" data-value="ACSF3">ACSF3</div><div class="option" data-selectable="" data-value="ACSL1">ACSL1</div><div class="option" data-selectable="" data-value="ACSL3">ACSL3</div><div class="option" data-selectable="" data-value="ACSL4">ACSL4</div><div class="option" data-selectable="" data-value="ACSL5">ACSL5</div><div class="option" data-selectable="" data-value="ACSL6">ACSL6</div><div class="option" data-selectable="" data-value="ACSM1">ACSM1</div><div class="option" data-selectable="" data-value="ACSM3">ACSM3</div><div class="option" data-selectable="" data-value="ACSM5">ACSM5</div><div class="option" data-selectable="" data-value="ACSM6">ACSM6</div><div class="option" data-selectable="" data-value="ACSS1">ACSS1</div><div class="option" data-selectable="" data-value="ACSS2">ACSS2</div><div class="option" data-selectable="" data-value="ACSS3">ACSS3</div><div class="option" data-selectable="" data-value="ACTA1">ACTA1</div><div class="option" data-selectable="" data-value="ACTA2">ACTA2</div><div class="option" data-selectable="" data-value="ACTA2-AS1">ACTA2-AS1</div><div class="option" data-selectable="" data-value="ACTB">ACTB</div><div class="option" data-selectable="" data-value="ACTBL2">ACTBL2</div><div class="option" data-selectable="" data-value="ACTBP1">ACTBP1</div><div class="option" data-selectable="" data-value="ACTBP14">ACTBP14</div><div class="option" data-selectable="" data-value="ACTC1">ACTC1</div><div class="option" data-selectable="" data-value="ACTG1">ACTG1</div><div class="option" data-selectable="" data-value="ACTG1P12">ACTG1P12</div><div class="option" data-selectable="" data-value="ACTG1P14">ACTG1P14</div><div class="option" data-selectable="" data-value="ACTG1P15">ACTG1P15</div><div class="option" data-selectable="" data-value="ACTG1P16">ACTG1P16</div><div class="option" data-selectable="" data-value="ACTG1P17">ACTG1P17</div><div class="option" data-selectable="" data-value="ACTG1P24">ACTG1P24</div><div class="option" data-selectable="" data-value="ACTG1P25">ACTG1P25</div><div class="option" data-selectable="" data-value="ACTG2">ACTG2</div><div class="option" data-selectable="" data-value="ACTL10">ACTL10</div><div class="option" data-selectable="" data-value="ACTL11P">ACTL11P</div><div class="option" data-selectable="" data-value="ACTL6A">ACTL6A</div><div class="option" data-selectable="" data-value="ACTL7A">ACTL7A</div><div class="option" data-selectable="" data-value="ACTL7B">ACTL7B</div><div class="option" data-selectable="" data-value="ACTL8">ACTL8</div><div class="option" data-selectable="" data-value="ACTMAP">ACTMAP</div><div class="option" data-selectable="" data-value="ACTN1">ACTN1</div><div class="option" data-selectable="" data-value="ACTN1-DT">ACTN1-DT</div><div class="option" data-selectable="" data-value="ACTN2">ACTN2</div><div class="option" data-selectable="" data-value="ACTN3">ACTN3</div><div class="option" data-selectable="" data-value="ACTN4">ACTN4</div><div class="option" data-selectable="" data-value="ACTN4P1">ACTN4P1</div><div class="option" data-selectable="" data-value="ACTR10">ACTR10</div><div class="option" data-selectable="" data-value="ACTR1A">ACTR1A</div><div class="option" data-selectable="" data-value="ACTR1AP1">ACTR1AP1</div><div class="option" data-selectable="" data-value="ACTR1B">ACTR1B</div><div class="option" data-selectable="" data-value="ACTR2">ACTR2</div><div class="option" data-selectable="" data-value="ACTR3">ACTR3</div><div class="option" data-selectable="" data-value="ACTR3B">ACTR3B</div><div class="option" data-selectable="" data-value="ACTR3C">ACTR3C</div><div class="option" data-selectable="" data-value="ACTR5">ACTR5</div><div class="option" data-selectable="" data-value="ACTR6">ACTR6</div><div class="option" data-selectable="" data-value="ACTR8">ACTR8</div><div class="option" data-selectable="" data-value="ACTRT3">ACTRT3</div><div class="option" data-selectable="" data-value="ACVR1">ACVR1</div><div class="option" data-selectable="" data-value="ACVR1B">ACVR1B</div><div class="option" data-selectable="" data-value="ACVR1C">ACVR1C</div><div class="option" data-selectable="" data-value="ACVR2A">ACVR2A</div><div class="option" data-selectable="" data-value="ACVR2B">ACVR2B</div><div class="option" data-selectable="" data-value="ACVR2B-AS1">ACVR2B-AS1</div><div class="option" data-selectable="" data-value="ACVRL1">ACVRL1</div><div class="option" data-selectable="" data-value="ACY1">ACY1</div><div class="option" data-selectable="" data-value="ACY3">ACY3</div><div class="option" data-selectable="" data-value="ACYP1">ACYP1</div><div class="option" data-selectable="" data-value="ACYP2">ACYP2</div><div class="option" data-selectable="" data-value="ADA">ADA</div><div class="option" data-selectable="" data-value="ADA2">ADA2</div><div class="option" data-selectable="" data-value="ADAD2">ADAD2</div><div class="option" data-selectable="" data-value="ADAL">ADAL</div><div class="option" data-selectable="" data-value="ADAM10">ADAM10</div><div class="option" data-selectable="" data-value="ADAM11">ADAM11</div><div class="option" data-selectable="" data-value="ADAM12">ADAM12</div><div class="option" data-selectable="" data-value="ADAM15">ADAM15</div><div class="option" data-selectable="" data-value="ADAM17">ADAM17</div><div class="option" data-selectable="" data-value="ADAM19">ADAM19</div><div class="option" data-selectable="" data-value="ADAM1B">ADAM1B</div><div class="option" data-selectable="" data-value="ADAM2">ADAM2</div><div class="option" data-selectable="" data-value="ADAM20">ADAM20</div><div class="option" data-selectable="" data-value="ADAM20P1">ADAM20P1</div><div class="option" data-selectable="" data-value="ADAM21">ADAM21</div><div class="option" data-selectable="" data-value="ADAM22">ADAM22</div><div class="option" data-selectable="" data-value="ADAM23">ADAM23</div><div class="option" data-selectable="" data-value="ADAM28">ADAM28</div><div class="option" data-selectable="" data-value="ADAM29">ADAM29</div><div class="option" data-selectable="" data-value="ADAM30">ADAM30</div><div class="option" data-selectable="" data-value="ADAM32">ADAM32</div><div class="option" data-selectable="" data-value="ADAM33">ADAM33</div><div class="option" data-selectable="" data-value="ADAM8">ADAM8</div><div class="option" data-selectable="" data-value="ADAM9">ADAM9</div><div class="option" data-selectable="" data-value="ADAMTS1">ADAMTS1</div><div class="option" data-selectable="" data-value="ADAMTS10">ADAMTS10</div><div class="option" data-selectable="" data-value="ADAMTS12">ADAMTS12</div><div class="option" data-selectable="" data-value="ADAMTS13">ADAMTS13</div><div class="option" data-selectable="" data-value="ADAMTS14">ADAMTS14</div><div class="option" data-selectable="" data-value="ADAMTS15">ADAMTS15</div><div class="option" data-selectable="" data-value="ADAMTS16">ADAMTS16</div><div class="option" data-selectable="" data-value="ADAMTS16-DT">ADAMTS16-DT</div><div class="option" data-selectable="" data-value="ADAMTS17">ADAMTS17</div><div class="option" data-selectable="" data-value="ADAMTS18">ADAMTS18</div><div class="option" data-selectable="" data-value="ADAMTS19">ADAMTS19</div><div class="option" data-selectable="" data-value="ADAMTS19-AS1">ADAMTS19-AS1</div><div class="option" data-selectable="" data-value="ADAMTS2">ADAMTS2</div><div class="option" data-selectable="" data-value="ADAMTS20">ADAMTS20</div><div class="option" data-selectable="" data-value="ADAMTS3">ADAMTS3</div><div class="option" data-selectable="" data-value="ADAMTS4">ADAMTS4</div><div class="option" data-selectable="" data-value="ADAMTS5">ADAMTS5</div><div class="option" data-selectable="" data-value="ADAMTS6">ADAMTS6</div><div class="option" data-selectable="" data-value="ADAMTS7">ADAMTS7</div><div class="option" data-selectable="" data-value="ADAMTS7P1">ADAMTS7P1</div><div class="option" data-selectable="" data-value="ADAMTS7P3">ADAMTS7P3</div><div class="option" data-selectable="" data-value="ADAMTS7P4">ADAMTS7P4</div><div class="option" data-selectable="" data-value="ADAMTS8">ADAMTS8</div><div class="option" data-selectable="" data-value="ADAMTS9">ADAMTS9</div><div class="option" data-selectable="" data-value="ADAMTS9-AS1">ADAMTS9-AS1</div><div class="option" data-selectable="" data-value="ADAMTS9-AS2">ADAMTS9-AS2</div><div class="option" data-selectable="" data-value="ADAMTSL1">ADAMTSL1</div><div class="option" data-selectable="" data-value="ADAMTSL2">ADAMTSL2</div><div class="option" data-selectable="" data-value="ADAMTSL3">ADAMTSL3</div><div class="option" data-selectable="" data-value="ADAMTSL4">ADAMTSL4</div><div class="option" data-selectable="" data-value="ADAMTSL5">ADAMTSL5</div><div class="option" data-selectable="" data-value="ADAP1">ADAP1</div><div class="option" data-selectable="" data-value="ADAP2">ADAP2</div><div class="option" data-selectable="" data-value="ADAR">ADAR</div><div class="option" data-selectable="" data-value="ADARB1">ADARB1</div><div class="option" data-selectable="" data-value="ADAT1">ADAT1</div><div class="option" data-selectable="" data-value="ADAT2">ADAT2</div><div class="option" data-selectable="" data-value="ADAT3">ADAT3</div><div class="option" data-selectable="" data-value="ADCK1">ADCK1</div><div class="option" data-selectable="" data-value="ADCK2">ADCK2</div><div class="option" data-selectable="" data-value="ADCK5">ADCK5</div><div class="option" data-selectable="" data-value="ADCY1">ADCY1</div><div class="option" data-selectable="" data-value="ADCY10">ADCY10</div><div class="option" data-selectable="" data-value="ADCY10P1">ADCY10P1</div><div class="option" data-selectable="" data-value="ADCY2">ADCY2</div><div class="option" data-selectable="" data-value="ADCY3">ADCY3</div><div class="option" data-selectable="" data-value="ADCY4">ADCY4</div><div class="option" data-selectable="" data-value="ADCY5">ADCY5</div><div class="option" data-selectable="" data-value="ADCY6">ADCY6</div><div class="option" data-selectable="" data-value="ADCY6-DT">ADCY6-DT</div><div class="option" data-selectable="" data-value="ADCY7">ADCY7</div><div class="option" data-selectable="" data-value="ADCY8">ADCY8</div><div class="option" data-selectable="" data-value="ADCY9">ADCY9</div><div class="option" data-selectable="" data-value="ADCYAP1">ADCYAP1</div><div class="option" data-selectable="" data-value="ADCYAP1R1">ADCYAP1R1</div><div class="option" data-selectable="" data-value="ADD1">ADD1</div><div class="option" data-selectable="" data-value="ADD2">ADD2</div><div class="option" data-selectable="" data-value="ADD3">ADD3</div><div class="option" data-selectable="" data-value="ADD3-AS1">ADD3-AS1</div><div class="option" data-selectable="" data-value="ADGB">ADGB</div><div class="option" data-selectable="" data-value="ADGRA1">ADGRA1</div><div class="option" data-selectable="" data-value="ADGRA2">ADGRA2</div><div class="option" data-selectable="" data-value="ADGRA3">ADGRA3</div><div class="option" data-selectable="" data-value="ADGRB1">ADGRB1</div><div class="option" data-selectable="" data-value="ADGRB2">ADGRB2</div><div class="option" data-selectable="" data-value="ADGRB3">ADGRB3</div><div class="option" data-selectable="" data-value="ADGRD1">ADGRD1</div><div class="option" data-selectable="" data-value="ADGRD2">ADGRD2</div><div class="option" data-selectable="" data-value="ADGRE1">ADGRE1</div><div class="option" data-selectable="" data-value="ADGRE2">ADGRE2</div><div class="option" data-selectable="" data-value="ADGRE3">ADGRE3</div><div class="option" data-selectable="" data-value="ADGRE5">ADGRE5</div><div class="option" data-selectable="" data-value="ADGRF1">ADGRF1</div><div class="option" data-selectable="" data-value="ADGRF2">ADGRF2</div><div class="option" data-selectable="" data-value="ADGRF3">ADGRF3</div><div class="option" data-selectable="" data-value="ADGRF4">ADGRF4</div><div class="option" data-selectable="" data-value="ADGRF5">ADGRF5</div><div class="option" data-selectable="" data-value="ADGRF5P1">ADGRF5P1</div><div class="option" data-selectable="" data-value="ADGRG1">ADGRG1</div><div class="option" data-selectable="" data-value="ADGRG2">ADGRG2</div><div class="option" data-selectable="" data-value="ADGRG3">ADGRG3</div><div class="option" data-selectable="" data-value="ADGRG4">ADGRG4</div><div class="option" data-selectable="" data-value="ADGRG5">ADGRG5</div><div class="option" data-selectable="" data-value="ADGRG6">ADGRG6</div><div class="option" data-selectable="" data-value="ADGRG7">ADGRG7</div><div class="option" data-selectable="" data-value="ADGRL1">ADGRL1</div><div class="option" data-selectable="" data-value="ADGRL1-AS1">ADGRL1-AS1</div><div class="option" data-selectable="" data-value="ADGRL2">ADGRL2</div><div class="option" data-selectable="" data-value="ADGRL3">ADGRL3</div><div class="option" data-selectable="" data-value="ADGRL4">ADGRL4</div><div class="option" data-selectable="" data-value="ADGRV1">ADGRV1</div><div class="option" data-selectable="" data-value="ADH1A">ADH1A</div><div class="option" data-selectable="" data-value="ADH1B">ADH1B</div><div class="option" data-selectable="" data-value="ADH1C">ADH1C</div><div class="option" data-selectable="" data-value="ADH4">ADH4</div><div class="option" data-selectable="" data-value="ADH5">ADH5</div><div class="option" data-selectable="" data-value="ADH5P3">ADH5P3</div><div class="option" data-selectable="" data-value="ADH6">ADH6</div><div class="option" data-selectable="" data-value="ADH7">ADH7</div><div class="option" data-selectable="" data-value="ADHFE1">ADHFE1</div><div class="option" data-selectable="" data-value="ADI1">ADI1</div><div class="option" data-selectable="" data-value="ADIG">ADIG</div><div class="option" data-selectable="" data-value="ADIPOQ">ADIPOQ</div><div class="option" data-selectable="" data-value="ADIPOQ-AS1">ADIPOQ-AS1</div><div class="option" data-selectable="" data-value="ADIPOR1">ADIPOR1</div><div class="option" data-selectable="" data-value="ADIPOR2">ADIPOR2</div><div class="option" data-selectable="" data-value="ADIRF">ADIRF</div><div class="option" data-selectable="" data-value="ADISSP">ADISSP</div><div class="option" data-selectable="" data-value="ADK">ADK</div><div class="option" data-selectable="" data-value="ADM">ADM</div><div class="option" data-selectable="" data-value="ADM2">ADM2</div><div class="option" data-selectable="" data-value="ADM5">ADM5</div><div class="option" data-selectable="" data-value="ADNP">ADNP</div><div class="option" data-selectable="" data-value="ADNP-AS1">ADNP-AS1</div><div class="option" data-selectable="" data-value="ADNP2">ADNP2</div><div class="option" data-selectable="" data-value="ADO">ADO</div><div class="option" data-selectable="" data-value="ADORA1">ADORA1</div><div class="option" data-selectable="" data-value="ADORA2A">ADORA2A</div><div class="option" data-selectable="" data-value="ADORA2A-AS1">ADORA2A-AS1</div><div class="option" data-selectable="" data-value="ADORA2B">ADORA2B</div><div class="option" data-selectable="" data-value="ADORA3">ADORA3</div><div class="option" data-selectable="" data-value="ADPGK">ADPGK</div><div class="option" data-selectable="" data-value="ADPGK-AS1">ADPGK-AS1</div><div class="option" data-selectable="" data-value="ADPRH">ADPRH</div><div class="option" data-selectable="" data-value="ADPRHL1">ADPRHL1</div><div class="option" data-selectable="" data-value="ADPRM">ADPRM</div><div class="option" data-selectable="" data-value="ADPRS">ADPRS</div><div class="option" data-selectable="" data-value="ADRA1A">ADRA1A</div><div class="option" data-selectable="" data-value="ADRA1B">ADRA1B</div><div class="option" data-selectable="" data-value="ADRA1D">ADRA1D</div><div class="option" data-selectable="" data-value="ADRA2A">ADRA2A</div><div class="option" data-selectable="" data-value="ADRA2B">ADRA2B</div><div class="option" data-selectable="" data-value="ADRA2C">ADRA2C</div><div class="option" data-selectable="" data-value="ADRB1">ADRB1</div><div class="option" data-selectable="" data-value="ADRB2">ADRB2</div><div class="option" data-selectable="" data-value="ADRM1">ADRM1</div><div class="option" data-selectable="" data-value="ADSL">ADSL</div><div class="option" data-selectable="" data-value="ADSS1">ADSS1</div><div class="option" data-selectable="" data-value="ADSS2">ADSS2</div><div class="option" data-selectable="" data-value="ADTRP">ADTRP</div><div class="option" data-selectable="" data-value="AEBP1">AEBP1</div><div class="option" data-selectable="" data-value="AEBP2">AEBP2</div><div class="option" data-selectable="" data-value="AEN">AEN</div><div class="option" data-selectable="" data-value="AFAP1">AFAP1</div><div class="option" data-selectable="" data-value="AFAP1-AS1">AFAP1-AS1</div><div class="option" data-selectable="" data-value="AFAP1L1">AFAP1L1</div><div class="option" data-selectable="" data-value="AFAP1L2">AFAP1L2</div><div class="option" data-selectable="" data-value="AFDN">AFDN</div><div class="option" data-selectable="" data-value="AFF1">AFF1</div><div class="option" data-selectable="" data-value="AFF2">AFF2</div><div class="option" data-selectable="" data-value="AFF3">AFF3</div><div class="option" data-selectable="" data-value="AFF4">AFF4</div><div class="option" data-selectable="" data-value="AFG1L">AFG1L</div><div class="option" data-selectable="" data-value="AFG2A">AFG2A</div><div class="option" data-selectable="" data-value="AFG2B">AFG2B</div><div class="option" data-selectable="" data-value="AFG3L1P">AFG3L1P</div><div class="option" data-selectable="" data-value="AFG3L2">AFG3L2</div><div class="option" data-selectable="" data-value="AFMID">AFMID</div><div class="option" data-selectable="" data-value="AFP">AFP</div><div class="option" data-selectable="" data-value="AFTPH">AFTPH</div><div class="option" data-selectable="" data-value="AFTPH-DT">AFTPH-DT</div><div class="option" data-selectable="" data-value="AGA">AGA</div><div class="option" data-selectable="" data-value="AGA-DT">AGA-DT</div><div class="option" data-selectable="" data-value="AGAP1">AGAP1</div><div class="option" data-selectable="" data-value="AGAP1-IT1">AGAP1-IT1</div><div class="option" data-selectable="" data-value="AGAP11">AGAP11</div><div class="option" data-selectable="" data-value="AGAP12P">AGAP12P</div><div class="option" data-selectable="" data-value="AGAP2">AGAP2</div><div class="option" data-selectable="" data-value="AGAP2-AS1">AGAP2-AS1</div><div class="option" data-selectable="" data-value="AGAP3">AGAP3</div><div class="option" data-selectable="" data-value="AGAP4">AGAP4</div><div class="option" data-selectable="" data-value="AGAP5">AGAP5</div><div class="option" data-selectable="" data-value="AGAP6">AGAP6</div><div class="option" data-selectable="" data-value="AGAP9">AGAP9</div><div class="option" data-selectable="" data-value="AGBL1">AGBL1</div><div class="option" data-selectable="" data-value="AGBL2">AGBL2</div><div class="option" data-selectable="" data-value="AGBL3">AGBL3</div><div class="option" data-selectable="" data-value="AGBL4">AGBL4</div><div class="option" data-selectable="" data-value="AGBL5">AGBL5</div><div class="option" data-selectable="" data-value="AGBL5-AS1">AGBL5-AS1</div><div class="option" data-selectable="" data-value="AGER">AGER</div><div class="option" data-selectable="" data-value="AGFG1">AGFG1</div><div class="option" data-selectable="" data-value="AGFG2">AGFG2</div><div class="option" data-selectable="" data-value="AGGF1">AGGF1</div><div class="option" data-selectable="" data-value="AGK">AGK</div><div class="option" data-selectable="" data-value="AGL">AGL</div><div class="option" data-selectable="" data-value="AGMAT">AGMAT</div><div class="option" data-selectable="" data-value="AGMO">AGMO</div><div class="option" data-selectable="" data-value="AGO1">AGO1</div><div class="option" data-selectable="" data-value="AGO2">AGO2</div><div class="option" data-selectable="" data-value="AGO3">AGO3</div><div class="option" data-selectable="" data-value="AGO4">AGO4</div><div class="option" data-selectable="" data-value="AGPAT1">AGPAT1</div><div class="option" data-selectable="" data-value="AGPAT2">AGPAT2</div><div class="option" data-selectable="" data-value="AGPAT3">AGPAT3</div><div class="option" data-selectable="" data-value="AGPAT4">AGPAT4</div><div class="option" data-selectable="" data-value="AGPAT5">AGPAT5</div><div class="option" data-selectable="" data-value="AGPS">AGPS</div><div class="option" data-selectable="" data-value="AGR2">AGR2</div><div class="option" data-selectable="" data-value="AGR3">AGR3</div><div class="option" data-selectable="" data-value="AGRN">AGRN</div><div class="option" data-selectable="" data-value="AGRP">AGRP</div><div class="option" data-selectable="" data-value="AGT">AGT</div><div class="option" data-selectable="" data-value="AGTPBP1">AGTPBP1</div><div class="option" data-selectable="" data-value="AGTR1">AGTR1</div><div class="option" data-selectable="" data-value="AGTR2">AGTR2</div><div class="option" data-selectable="" data-value="AGTRAP">AGTRAP</div><div class="option" data-selectable="" data-value="AGXT">AGXT</div><div class="option" data-selectable="" data-value="AGXT2">AGXT2</div><div class="option" data-selectable="" data-value="AHCTF1">AHCTF1</div><div class="option" data-selectable="" data-value="AHCY">AHCY</div><div class="option" data-selectable="" data-value="AHCYL1">AHCYL1</div><div class="option" data-selectable="" data-value="AHCYL2">AHCYL2</div><div class="option" data-selectable="" data-value="AHCYP2">AHCYP2</div><div class="option" data-selectable="" data-value="AHCYP5">AHCYP5</div><div class="option" data-selectable="" data-value="AHCYP7">AHCYP7</div><div class="option" data-selectable="" data-value="AHDC1">AHDC1</div><div class="option" data-selectable="" data-value="AHI1">AHI1</div><div class="option" data-selectable="" data-value="AHI1-DT">AHI1-DT</div><div class="option" data-selectable="" data-value="AHNAK">AHNAK</div><div class="option" data-selectable="" data-value="AHNAK2">AHNAK2</div><div class="option" data-selectable="" data-value="AHR">AHR</div><div class="option" data-selectable="" data-value="AHRR">AHRR</div><div class="option" data-selectable="" data-value="AHSA1">AHSA1</div><div class="option" data-selectable="" data-value="AHSA2P">AHSA2P</div><div class="option" data-selectable="" data-value="AHSG">AHSG</div><div class="option" data-selectable="" data-value="AIDA">AIDA</div><div class="option" data-selectable="" data-value="AIDAP2">AIDAP2</div><div class="option" data-selectable="" data-value="AIF1">AIF1</div><div class="option" data-selectable="" data-value="AIF1L">AIF1L</div><div class="option" data-selectable="" data-value="AIFM1">AIFM1</div><div class="option" data-selectable="" data-value="AIFM2">AIFM2</div><div class="option" data-selectable="" data-value="AIFM3">AIFM3</div><div class="option" data-selectable="" data-value="AIG1">AIG1</div><div class="option" data-selectable="" data-value="AIM2">AIM2</div><div class="option" data-selectable="" data-value="AIMP1">AIMP1</div><div class="option" data-selectable="" data-value="AIMP1P1">AIMP1P1</div><div class="option" data-selectable="" data-value="AIMP2">AIMP2</div><div class="option" data-selectable="" data-value="AIP">AIP</div><div class="option" data-selectable="" data-value="AIPL1">AIPL1</div><div class="option" data-selectable="" data-value="AIRE">AIRE</div><div class="option" data-selectable="" data-value="AIRIM">AIRIM</div><div class="option" data-selectable="" data-value="AJAP1">AJAP1</div><div class="option" data-selectable="" data-value="AJM1">AJM1</div><div class="option" data-selectable="" data-value="AJUBA">AJUBA</div><div class="option" data-selectable="" data-value="AK1">AK1</div><div class="option" data-selectable="" data-value="AK2">AK2</div><div class="option" data-selectable="" data-value="AK2P1">AK2P1</div><div class="option" data-selectable="" data-value="AK3">AK3</div><div class="option" data-selectable="" data-value="AK3P3">AK3P3</div><div class="option" data-selectable="" data-value="AK4">AK4</div><div class="option" data-selectable="" data-value="AK4P5">AK4P5</div><div class="option" data-selectable="" data-value="AK5">AK5</div><div class="option" data-selectable="" data-value="AK6">AK6</div><div class="option" data-selectable="" data-value="AK7">AK7</div><div class="option" data-selectable="" data-value="AK8">AK8</div><div class="option" data-selectable="" data-value="AK9">AK9</div><div class="option" data-selectable="" data-value="AKAIN1">AKAIN1</div><div class="option" data-selectable="" data-value="AKAP1">AKAP1</div><div class="option" data-selectable="" data-value="AKAP10">AKAP10</div><div class="option" data-selectable="" data-value="AKAP11">AKAP11</div><div class="option" data-selectable="" data-value="AKAP12">AKAP12</div><div class="option" data-selectable="" data-value="AKAP13">AKAP13</div><div class="option" data-selectable="" data-value="AKAP14">AKAP14</div><div class="option" data-selectable="" data-value="AKAP17A">AKAP17A</div><div class="option" data-selectable="" data-value="AKAP3">AKAP3</div><div class="option" data-selectable="" data-value="AKAP4">AKAP4</div><div class="option" data-selectable="" data-value="AKAP5">AKAP5</div><div class="option" data-selectable="" data-value="AKAP6">AKAP6</div><div class="option" data-selectable="" data-value="AKAP7">AKAP7</div><div class="option" data-selectable="" data-value="AKAP8">AKAP8</div><div class="option" data-selectable="" data-value="AKAP8L">AKAP8L</div><div class="option" data-selectable="" data-value="AKAP8P1">AKAP8P1</div><div class="option" data-selectable="" data-value="AKAP9">AKAP9</div><div class="option" data-selectable="" data-value="AKIP1">AKIP1</div><div class="option" data-selectable="" data-value="AKIRIN1">AKIRIN1</div><div class="option" data-selectable="" data-value="AKIRIN2">AKIRIN2</div><div class="option" data-selectable="" data-value="AKNA">AKNA</div><div class="option" data-selectable="" data-value="AKNAD1">AKNAD1</div><div class="option" data-selectable="" data-value="AKR1A1">AKR1A1</div><div class="option" data-selectable="" data-value="AKR1B1">AKR1B1</div><div class="option" data-selectable="" data-value="AKR1B10">AKR1B10</div><div class="option" data-selectable="" data-value="AKR1B15">AKR1B15</div><div class="option" data-selectable="" data-value="AKR1B1P1">AKR1B1P1</div><div class="option" data-selectable="" data-value="AKR1C1">AKR1C1</div><div class="option" data-selectable="" data-value="AKR1C2">AKR1C2</div><div class="option" data-selectable="" data-value="AKR1C3">AKR1C3</div><div class="option" data-selectable="" data-value="AKR1D1">AKR1D1</div><div class="option" data-selectable="" data-value="AKR1E2">AKR1E2</div><div class="option" data-selectable="" data-value="AKR7A2">AKR7A2</div><div class="option" data-selectable="" data-value="AKR7A3">AKR7A3</div><div class="option" data-selectable="" data-value="AKR7L">AKR7L</div><div class="option" data-selectable="" data-value="AKT1">AKT1</div><div class="option" data-selectable="" data-value="AKT1S1">AKT1S1</div><div class="option" data-selectable="" data-value="AKT2">AKT2</div><div class="option" data-selectable="" data-value="AKT3">AKT3</div><div class="option" data-selectable="" data-value="AKTIP">AKTIP</div><div class="option" data-selectable="" data-value="ALAD">ALAD</div><div class="option" data-selectable="" data-value="ALAS1">ALAS1</div><div class="option" data-selectable="" data-value="ALAS2">ALAS2</div><div class="option" data-selectable="" data-value="ALB">ALB</div><div class="option" data-selectable="" data-value="ALCAM">ALCAM</div><div class="option" data-selectable="" data-value="ALDH16A1">ALDH16A1</div><div class="option" data-selectable="" data-value="ALDH18A1">ALDH18A1</div><div class="option" data-selectable="" data-value="ALDH1A1">ALDH1A1</div><div class="option" data-selectable="" data-value="ALDH1A2">ALDH1A2</div><div class="option" data-selectable="" data-value="ALDH1A3">ALDH1A3</div><div class="option" data-selectable="" data-value="ALDH1A3-AS1">ALDH1A3-AS1</div><div class="option" data-selectable="" data-value="ALDH1B1">ALDH1B1</div><div class="option" data-selectable="" data-value="ALDH1L1">ALDH1L1</div><div class="option" data-selectable="" data-value="ALDH1L1-AS2">ALDH1L1-AS2</div><div class="option" data-selectable="" data-value="ALDH1L2">ALDH1L2</div><div class="option" data-selectable="" data-value="ALDH2">ALDH2</div><div class="option" data-selectable="" data-value="ALDH3A1">ALDH3A1</div><div class="option" data-selectable="" data-value="ALDH3A2">ALDH3A2</div><div class="option" data-selectable="" data-value="ALDH3B1">ALDH3B1</div><div class="option" data-selectable="" data-value="ALDH3B2">ALDH3B2</div><div class="option" data-selectable="" data-value="ALDH4A1">ALDH4A1</div><div class="option" data-selectable="" data-value="ALDH5A1">ALDH5A1</div><div class="option" data-selectable="" data-value="ALDH6A1">ALDH6A1</div><div class="option" data-selectable="" data-value="ALDH7A1">ALDH7A1</div><div class="option" data-selectable="" data-value="ALDH7A1P1">ALDH7A1P1</div><div class="option" data-selectable="" data-value="ALDH8A1">ALDH8A1</div><div class="option" data-selectable="" data-value="ALDH9A1">ALDH9A1</div><div class="option" data-selectable="" data-value="ALDOA">ALDOA</div><div class="option" data-selectable="" data-value="ALDOB">ALDOB</div><div class="option" data-selectable="" data-value="ALDOC">ALDOC</div><div class="option" data-selectable="" data-value="ALG1">ALG1</div><div class="option" data-selectable="" data-value="ALG10">ALG10</div><div class="option" data-selectable="" data-value="ALG10B">ALG10B</div><div class="option" data-selectable="" data-value="ALG11">ALG11</div><div class="option" data-selectable="" data-value="ALG12">ALG12</div><div class="option" data-selectable="" data-value="ALG13">ALG13</div><div class="option" data-selectable="" data-value="ALG14">ALG14</div><div class="option" data-selectable="" data-value="ALG1L13P">ALG1L13P</div><div class="option" data-selectable="" data-value="ALG1L1P">ALG1L1P</div><div class="option" data-selectable="" data-value="ALG1L2">ALG1L2</div><div class="option" data-selectable="" data-value="ALG1L3P">ALG1L3P</div><div class="option" data-selectable="" data-value="ALG1L5P">ALG1L5P</div><div class="option" data-selectable="" data-value="ALG2">ALG2</div><div class="option" data-selectable="" data-value="ALG3">ALG3</div><div class="option" data-selectable="" data-value="ALG3P1">ALG3P1</div><div class="option" data-selectable="" data-value="ALG5">ALG5</div><div class="option" data-selectable="" data-value="ALG6">ALG6</div><div class="option" data-selectable="" data-value="ALG8">ALG8</div><div class="option" data-selectable="" data-value="ALG9">ALG9</div><div class="option" data-selectable="" data-value="ALK">ALK</div><div class="option" data-selectable="" data-value="ALKAL1">ALKAL1</div><div class="option" data-selectable="" data-value="ALKAL2">ALKAL2</div><div class="option" data-selectable="" data-value="ALKBH1">ALKBH1</div><div class="option" data-selectable="" data-value="ALKBH2">ALKBH2</div><div class="option" data-selectable="" data-value="ALKBH3">ALKBH3</div><div class="option" data-selectable="" data-value="ALKBH3-AS1">ALKBH3-AS1</div><div class="option" data-selectable="" data-value="ALKBH4">ALKBH4</div><div class="option" data-selectable="" data-value="ALKBH5">ALKBH5</div><div class="option" data-selectable="" data-value="ALKBH6">ALKBH6</div><div class="option" data-selectable="" data-value="ALKBH7">ALKBH7</div><div class="option" data-selectable="" data-value="ALKBH8">ALKBH8</div><div class="option" data-selectable="" data-value="ALLC">ALLC</div><div class="option" data-selectable="" data-value="ALMS1">ALMS1</div><div class="option" data-selectable="" data-value="ALMS1-IT1">ALMS1-IT1</div><div class="option" data-selectable="" data-value="ALMS1P1">ALMS1P1</div><div class="option" data-selectable="" data-value="ALOX12">ALOX12</div><div class="option" data-selectable="" data-value="ALOX12B">ALOX12B</div><div class="option" data-selectable="" data-value="ALOX12P2">ALOX12P2</div><div class="option" data-selectable="" data-value="ALOX15">ALOX15</div><div class="option" data-selectable="" data-value="ALOX15B">ALOX15B</div><div class="option" data-selectable="" data-value="ALOX15P2">ALOX15P2</div><div class="option" data-selectable="" data-value="ALOX5">ALOX5</div><div class="option" data-selectable="" data-value="ALOX5AP">ALOX5AP</div><div class="option" data-selectable="" data-value="ALOXE3">ALOXE3</div><div class="option" data-selectable="" data-value="ALPG">ALPG</div><div class="option" data-selectable="" data-value="ALPI">ALPI</div><div class="option" data-selectable="" data-value="ALPK1">ALPK1</div><div class="option" data-selectable="" data-value="ALPK2">ALPK2</div><div class="option" data-selectable="" data-value="ALPK3">ALPK3</div><div class="option" data-selectable="" data-value="ALPL">ALPL</div><div class="option" data-selectable="" data-value="ALPP">ALPP</div><div class="option" data-selectable="" data-value="ALS2">ALS2</div><div class="option" data-selectable="" data-value="ALS2CL">ALS2CL</div><div class="option" data-selectable="" data-value="ALX1">ALX1</div><div class="option" data-selectable="" data-value="ALX3">ALX3</div><div class="option" data-selectable="" data-value="ALX4">ALX4</div><div class="option" data-selectable="" data-value="ALYREF">ALYREF</div><div class="option" data-selectable="" data-value="AMACR">AMACR</div><div class="option" data-selectable="" data-value="AMBN">AMBN</div><div class="option" data-selectable="" data-value="AMBP">AMBP</div><div class="option" data-selectable="" data-value="AMBRA1">AMBRA1</div><div class="option" data-selectable="" data-value="AMD1">AMD1</div><div class="option" data-selectable="" data-value="AMD1P1">AMD1P1</div><div class="option" data-selectable="" data-value="AMDHD1">AMDHD1</div><div class="option" data-selectable="" data-value="AMDHD2">AMDHD2</div><div class="option" data-selectable="" data-value="AMELX">AMELX</div><div class="option" data-selectable="" data-value="AMER1">AMER1</div><div class="option" data-selectable="" data-value="AMER2">AMER2</div><div class="option" data-selectable="" data-value="AMER3">AMER3</div><div class="option" data-selectable="" data-value="AMFR">AMFR</div><div class="option" data-selectable="" data-value="AMH">AMH</div><div class="option" data-selectable="" data-value="AMHR2">AMHR2</div><div class="option" data-selectable="" data-value="AMIGO1">AMIGO1</div><div class="option" data-selectable="" data-value="AMIGO2">AMIGO2</div><div class="option" data-selectable="" data-value="AMIGO3">AMIGO3</div><div class="option" data-selectable="" data-value="AMMECR1">AMMECR1</div><div class="option" data-selectable="" data-value="AMMECR1L">AMMECR1L</div><div class="option" data-selectable="" data-value="AMMECR1LP1">AMMECR1LP1</div><div class="option" data-selectable="" data-value="AMN">AMN</div><div class="option" data-selectable="" data-value="AMN1">AMN1</div><div class="option" data-selectable="" data-value="AMOT">AMOT</div><div class="option" data-selectable="" data-value="AMOTL1">AMOTL1</div><div class="option" data-selectable="" data-value="AMOTL2">AMOTL2</div><div class="option" data-selectable="" data-value="AMPD1">AMPD1</div><div class="option" data-selectable="" data-value="AMPD2">AMPD2</div><div class="option" data-selectable="" data-value="AMPD3">AMPD3</div><div class="option" data-selectable="" data-value="AMPH">AMPH</div><div class="option" data-selectable="" data-value="AMT">AMT</div><div class="option" data-selectable="" data-value="AMTN">AMTN</div><div class="option" data-selectable="" data-value="AMY1A">AMY1A</div><div class="option" data-selectable="" data-value="AMY1B">AMY1B</div><div class="option" data-selectable="" data-value="AMY1C">AMY1C</div><div class="option" data-selectable="" data-value="AMY2B">AMY2B</div><div class="option" data-selectable="" data-value="AMZ1">AMZ1</div><div class="option" data-selectable="" data-value="AMZ2">AMZ2</div><div class="option" data-selectable="" data-value="AMZ2P1">AMZ2P1</div><div class="option" data-selectable="" data-value="ANAPC1">ANAPC1</div><div class="option" data-selectable="" data-value="ANAPC10">ANAPC10</div><div class="option" data-selectable="" data-value="ANAPC11">ANAPC11</div><div class="option" data-selectable="" data-value="ANAPC13">ANAPC13</div><div class="option" data-selectable="" data-value="ANAPC15">ANAPC15</div><div class="option" data-selectable="" data-value="ANAPC16">ANAPC16</div><div class="option" data-selectable="" data-value="ANAPC1P2">ANAPC1P2</div><div class="option" data-selectable="" data-value="ANAPC1P5">ANAPC1P5</div><div class="option" data-selectable="" data-value="ANAPC2">ANAPC2</div><div class="option" data-selectable="" data-value="ANAPC4">ANAPC4</div><div class="option" data-selectable="" data-value="ANAPC5">ANAPC5</div><div class="option" data-selectable="" data-value="ANAPC7">ANAPC7</div><div class="option" data-selectable="" data-value="ANG">ANG</div><div class="option" data-selectable="" data-value="ANGEL1">ANGEL1</div><div class="option" data-selectable="" data-value="ANGEL2">ANGEL2</div><div class="option" data-selectable="" data-value="ANGPT1">ANGPT1</div><div class="option" data-selectable="" data-value="ANGPT2">ANGPT2</div><div class="option" data-selectable="" data-value="ANGPT4">ANGPT4</div><div class="option" data-selectable="" data-value="ANGPTL1">ANGPTL1</div><div class="option" data-selectable="" data-value="ANGPTL2">ANGPTL2</div><div class="option" data-selectable="" data-value="ANGPTL3">ANGPTL3</div><div class="option" data-selectable="" data-value="ANGPTL4">ANGPTL4</div><div class="option" data-selectable="" data-value="ANGPTL5">ANGPTL5</div><div class="option" data-selectable="" data-value="ANGPTL6">ANGPTL6</div><div class="option" data-selectable="" data-value="ANGPTL7">ANGPTL7</div><div class="option" data-selectable="" data-value="ANGPTL8">ANGPTL8</div><div class="option" data-selectable="" data-value="ANK1">ANK1</div><div class="option" data-selectable="" data-value="ANK2">ANK2</div><div class="option" data-selectable="" data-value="ANK2-AS1">ANK2-AS1</div><div class="option" data-selectable="" data-value="ANK3">ANK3</div><div class="option" data-selectable="" data-value="ANKAR">ANKAR</div><div class="option" data-selectable="" data-value="ANKDD1A">ANKDD1A</div><div class="option" data-selectable="" data-value="ANKDD1B">ANKDD1B</div><div class="option" data-selectable="" data-value="ANKEF1">ANKEF1</div><div class="option" data-selectable="" data-value="ANKFN1">ANKFN1</div><div class="option" data-selectable="" data-value="ANKFY1">ANKFY1</div><div class="option" data-selectable="" data-value="ANKH">ANKH</div><div class="option" data-selectable="" data-value="ANKHD1">ANKHD1</div><div class="option" data-selectable="" data-value="ANKHD1-EIF4EBP3">ANKHD1-EIF4EBP3</div><div class="option" data-selectable="" data-value="ANKIB1">ANKIB1</div><div class="option" data-selectable="" data-value="ANKK1">ANKK1</div><div class="option" data-selectable="" data-value="ANKLE1">ANKLE1</div><div class="option" data-selectable="" data-value="ANKLE2">ANKLE2</div><div class="option" data-selectable="" data-value="ANKMY1">ANKMY1</div><div class="option" data-selectable="" data-value="ANKMY2">ANKMY2</div><div class="option" data-selectable="" data-value="ANKRA2">ANKRA2</div><div class="option" data-selectable="" data-value="ANKRD1">ANKRD1</div><div class="option" data-selectable="" data-value="ANKRD10">ANKRD10</div><div class="option" data-selectable="" data-value="ANKRD11">ANKRD11</div><div class="option" data-selectable="" data-value="ANKRD12">ANKRD12</div><div class="option" data-selectable="" data-value="ANKRD13A">ANKRD13A</div><div class="option" data-selectable="" data-value="ANKRD13B">ANKRD13B</div><div class="option" data-selectable="" data-value="ANKRD13C">ANKRD13C</div><div class="option" data-selectable="" data-value="ANKRD13C-DT">ANKRD13C-DT</div><div class="option" data-selectable="" data-value="ANKRD13D">ANKRD13D</div><div class="option" data-selectable="" data-value="ANKRD16">ANKRD16</div><div class="option" data-selectable="" data-value="ANKRD17">ANKRD17</div><div class="option" data-selectable="" data-value="ANKRD18A">ANKRD18A</div><div class="option" data-selectable="" data-value="ANKRD18B">ANKRD18B</div><div class="option" data-selectable="" data-value="ANKRD18EP">ANKRD18EP</div><div class="option" data-selectable="" data-value="ANKRD19P">ANKRD19P</div><div class="option" data-selectable="" data-value="ANKRD2">ANKRD2</div><div class="option" data-selectable="" data-value="ANKRD20A1">ANKRD20A1</div><div class="option" data-selectable="" data-value="ANKRD20A11P">ANKRD20A11P</div><div class="option" data-selectable="" data-value="ANKRD20A17P">ANKRD20A17P</div><div class="option" data-selectable="" data-value="ANKRD20A2P">ANKRD20A2P</div><div class="option" data-selectable="" data-value="ANKRD20A3P">ANKRD20A3P</div><div class="option" data-selectable="" data-value="ANKRD20A5P">ANKRD20A5P</div><div class="option" data-selectable="" data-value="ANKRD20A8P">ANKRD20A8P</div><div class="option" data-selectable="" data-value="ANKRD22">ANKRD22</div><div class="option" data-selectable="" data-value="ANKRD23">ANKRD23</div><div class="option" data-selectable="" data-value="ANKRD24">ANKRD24</div><div class="option" data-selectable="" data-value="ANKRD26">ANKRD26</div><div class="option" data-selectable="" data-value="ANKRD26P4">ANKRD26P4</div><div class="option" data-selectable="" data-value="ANKRD27">ANKRD27</div><div class="option" data-selectable="" data-value="ANKRD28">ANKRD28</div><div class="option" data-selectable="" data-value="ANKRD29">ANKRD29</div><div class="option" data-selectable="" data-value="ANKRD30A">ANKRD30A</div><div class="option" data-selectable="" data-value="ANKRD30B">ANKRD30B</div><div class="option" data-selectable="" data-value="ANKRD30BL">ANKRD30BL</div><div class="option" data-selectable="" data-value="ANKRD30BP1">ANKRD30BP1</div><div class="option" data-selectable="" data-value="ANKRD31">ANKRD31</div><div class="option" data-selectable="" data-value="ANKRD33">ANKRD33</div><div class="option" data-selectable="" data-value="ANKRD33B">ANKRD33B</div><div class="option" data-selectable="" data-value="ANKRD33BP1">ANKRD33BP1</div><div class="option" data-selectable="" data-value="ANKRD33BP8">ANKRD33BP8</div><div class="option" data-selectable="" data-value="ANKRD33BP9">ANKRD33BP9</div><div class="option" data-selectable="" data-value="ANKRD34A">ANKRD34A</div><div class="option" data-selectable="" data-value="ANKRD34B">ANKRD34B</div><div class="option" data-selectable="" data-value="ANKRD34C">ANKRD34C</div><div class="option" data-selectable="" data-value="ANKRD34C-AS1">ANKRD34C-AS1</div><div class="option" data-selectable="" data-value="ANKRD35">ANKRD35</div><div class="option" data-selectable="" data-value="ANKRD36">ANKRD36</div><div class="option" data-selectable="" data-value="ANKRD36B">ANKRD36B</div><div class="option" data-selectable="" data-value="ANKRD36BP1">ANKRD36BP1</div><div class="option" data-selectable="" data-value="ANKRD36BP2">ANKRD36BP2</div><div class="option" data-selectable="" data-value="ANKRD36C">ANKRD36C</div><div class="option" data-selectable="" data-value="ANKRD37">ANKRD37</div><div class="option" data-selectable="" data-value="ANKRD39">ANKRD39</div><div class="option" data-selectable="" data-value="ANKRD40">ANKRD40</div><div class="option" data-selectable="" data-value="ANKRD40CL">ANKRD40CL</div><div class="option" data-selectable="" data-value="ANKRD42">ANKRD42</div><div class="option" data-selectable="" data-value="ANKRD42-DT">ANKRD42-DT</div><div class="option" data-selectable="" data-value="ANKRD44">ANKRD44</div><div class="option" data-selectable="" data-value="ANKRD44-AS1">ANKRD44-AS1</div><div class="option" data-selectable="" data-value="ANKRD44-IT1">ANKRD44-IT1</div><div class="option" data-selectable="" data-value="ANKRD45">ANKRD45</div><div class="option" data-selectable="" data-value="ANKRD46">ANKRD46</div><div class="option" data-selectable="" data-value="ANKRD49">ANKRD49</div><div class="option" data-selectable="" data-value="ANKRD50">ANKRD50</div><div class="option" data-selectable="" data-value="ANKRD52">ANKRD52</div><div class="option" data-selectable="" data-value="ANKRD53">ANKRD53</div><div class="option" data-selectable="" data-value="ANKRD54">ANKRD54</div><div class="option" data-selectable="" data-value="ANKRD55">ANKRD55</div><div class="option" data-selectable="" data-value="ANKRD6">ANKRD6</div><div class="option" data-selectable="" data-value="ANKRD60">ANKRD60</div><div class="option" data-selectable="" data-value="ANKRD61">ANKRD61</div><div class="option" data-selectable="" data-value="ANKRD62">ANKRD62</div><div class="option" data-selectable="" data-value="ANKRD63">ANKRD63</div><div class="option" data-selectable="" data-value="ANKRD65">ANKRD65</div><div class="option" data-selectable="" data-value="ANKRD7">ANKRD7</div><div class="option" data-selectable="" data-value="ANKRD9">ANKRD9</div><div class="option" data-selectable="" data-value="ANKS1A">ANKS1A</div><div class="option" data-selectable="" data-value="ANKS1B">ANKS1B</div><div class="option" data-selectable="" data-value="ANKS3">ANKS3</div><div class="option" data-selectable="" data-value="ANKS4B">ANKS4B</div><div class="option" data-selectable="" data-value="ANKS6">ANKS6</div><div class="option" data-selectable="" data-value="ANKUB1">ANKUB1</div><div class="option" data-selectable="" data-value="ANKZF1">ANKZF1</div><div class="option" data-selectable="" data-value="ANLN">ANLN</div><div class="option" data-selectable="" data-value="ANO1">ANO1</div><div class="option" data-selectable="" data-value="ANO10">ANO10</div><div class="option" data-selectable="" data-value="ANO2">ANO2</div><div class="option" data-selectable="" data-value="ANO3">ANO3</div><div class="option" data-selectable="" data-value="ANO4">ANO4</div><div class="option" data-selectable="" data-value="ANO5">ANO5</div><div class="option" data-selectable="" data-value="ANO6">ANO6</div><div class="option" data-selectable="" data-value="ANO7">ANO7</div><div class="option" data-selectable="" data-value="ANO8">ANO8</div><div class="option" data-selectable="" data-value="ANO9">ANO9</div><div class="option" data-selectable="" data-value="ANOS1">ANOS1</div><div class="option" data-selectable="" data-value="ANP32A">ANP32A</div><div class="option" data-selectable="" data-value="ANP32AP1">ANP32AP1</div><div class="option" data-selectable="" data-value="ANP32B">ANP32B</div><div class="option" data-selectable="" data-value="ANP32BP1">ANP32BP1</div><div class="option" data-selectable="" data-value="ANP32D">ANP32D</div><div class="option" data-selectable="" data-value="ANP32E">ANP32E</div><div class="option" data-selectable="" data-value="ANPEP">ANPEP</div><div class="option" data-selectable="" data-value="ANTKMT">ANTKMT</div><div class="option" data-selectable="" data-value="ANTXR1">ANTXR1</div><div class="option" data-selectable="" data-value="ANTXR2">ANTXR2</div><div class="option" data-selectable="" data-value="ANTXRL">ANTXRL</div><div class="option" data-selectable="" data-value="ANXA1">ANXA1</div><div class="option" data-selectable="" data-value="ANXA10">ANXA10</div><div class="option" data-selectable="" data-value="ANXA11">ANXA11</div><div class="option" data-selectable="" data-value="ANXA13">ANXA13</div><div class="option" data-selectable="" data-value="ANXA2">ANXA2</div><div class="option" data-selectable="" data-value="ANXA2R">ANXA2R</div><div class="option" data-selectable="" data-value="ANXA2R-AS1">ANXA2R-AS1</div><div class="option" data-selectable="" data-value="ANXA2R-OT1">ANXA2R-OT1</div><div class="option" data-selectable="" data-value="ANXA3">ANXA3</div><div class="option" data-selectable="" data-value="ANXA4">ANXA4</div><div class="option" data-selectable="" data-value="ANXA5">ANXA5</div><div class="option" data-selectable="" data-value="ANXA6">ANXA6</div><div class="option" data-selectable="" data-value="ANXA7">ANXA7</div><div class="option" data-selectable="" data-value="ANXA8">ANXA8</div><div class="option" data-selectable="" data-value="ANXA8L1">ANXA8L1</div><div class="option" data-selectable="" data-value="ANXA9">ANXA9</div><div class="option" data-selectable="" data-value="AOAH">AOAH</div><div class="option" data-selectable="" data-value="AOC1">AOC1</div><div class="option" data-selectable="" data-value="AOC2">AOC2</div><div class="option" data-selectable="" data-value="AOC3">AOC3</div><div class="option" data-selectable="" data-value="AOC4P">AOC4P</div><div class="option" data-selectable="" data-value="AOPEP">AOPEP</div><div class="option" data-selectable="" data-value="AOX1">AOX1</div><div class="option" data-selectable="" data-value="AP1AR">AP1AR</div><div class="option" data-selectable="" data-value="AP1B1">AP1B1</div><div class="option" data-selectable="" data-value="AP1G1">AP1G1</div><div class="option" data-selectable="" data-value="AP1G2">AP1G2</div><div class="option" data-selectable="" data-value="AP1G2-AS1">AP1G2-AS1</div><div class="option" data-selectable="" data-value="AP1M1">AP1M1</div><div class="option" data-selectable="" data-value="AP1M2">AP1M2</div><div class="option" data-selectable="" data-value="AP1S1">AP1S1</div><div class="option" data-selectable="" data-value="AP1S2">AP1S2</div><div class="option" data-selectable="" data-value="AP1S3">AP1S3</div><div class="option" data-selectable="" data-value="AP2A1">AP2A1</div><div class="option" data-selectable="" data-value="AP2A2">AP2A2</div><div class="option" data-selectable="" data-value="AP2B1">AP2B1</div><div class="option" data-selectable="" data-value="AP2B1P1">AP2B1P1</div><div class="option" data-selectable="" data-value="AP2M1">AP2M1</div><div class="option" data-selectable="" data-value="AP2S1">AP2S1</div><div class="option" data-selectable="" data-value="AP3B1">AP3B1</div><div class="option" data-selectable="" data-value="AP3B2">AP3B2</div><div class="option" data-selectable="" data-value="AP3D1">AP3D1</div><div class="option" data-selectable="" data-value="AP3M1">AP3M1</div><div class="option" data-selectable="" data-value="AP3M2">AP3M2</div><div class="option" data-selectable="" data-value="AP3S1">AP3S1</div><div class="option" data-selectable="" data-value="AP3S2">AP3S2</div><div class="option" data-selectable="" data-value="AP4B1">AP4B1</div><div class="option" data-selectable="" data-value="AP4B1-AS1">AP4B1-AS1</div><div class="option" data-selectable="" data-value="AP4E1">AP4E1</div><div class="option" data-selectable="" data-value="AP4M1">AP4M1</div><div class="option" data-selectable="" data-value="AP4S1">AP4S1</div><div class="option" data-selectable="" data-value="AP5B1">AP5B1</div><div class="option" data-selectable="" data-value="AP5M1">AP5M1</div><div class="option" data-selectable="" data-value="AP5S1">AP5S1</div><div class="option" data-selectable="" data-value="AP5Z1">AP5Z1</div><div class="option" data-selectable="" data-value="APAF1">APAF1</div><div class="option" data-selectable="" data-value="APBA1">APBA1</div><div class="option" data-selectable="" data-value="APBA2">APBA2</div><div class="option" data-selectable="" data-value="APBA3">APBA3</div><div class="option" data-selectable="" data-value="APBB1">APBB1</div><div class="option" data-selectable="" data-value="APBB1IP">APBB1IP</div><div class="option" data-selectable="" data-value="APBB2">APBB2</div><div class="option" data-selectable="" data-value="APBB3">APBB3</div><div class="option" data-selectable="" data-value="APC">APC</div><div class="option" data-selectable="" data-value="APC2">APC2</div><div class="option" data-selectable="" data-value="APCDD1">APCDD1</div><div class="option" data-selectable="" data-value="APCDD1L">APCDD1L</div><div class="option" data-selectable="" data-value="APCDD1L-DT">APCDD1L-DT</div><div class="option" data-selectable="" data-value="APEH">APEH</div><div class="option" data-selectable="" data-value="APELA">APELA</div><div class="option" data-selectable="" data-value="APEX1">APEX1</div><div class="option" data-selectable="" data-value="APEX2">APEX2</div><div class="option" data-selectable="" data-value="APH1A">APH1A</div><div class="option" data-selectable="" data-value="APH1B">APH1B</div><div class="option" data-selectable="" data-value="API5">API5</div><div class="option" data-selectable="" data-value="APIP">APIP</div><div class="option" data-selectable="" data-value="APLF">APLF</div><div class="option" data-selectable="" data-value="APLN">APLN</div><div class="option" data-selectable="" data-value="APLP1">APLP1</div><div class="option" data-selectable="" data-value="APLP2">APLP2</div><div class="option" data-selectable="" data-value="APMAP">APMAP</div><div class="option" data-selectable="" data-value="APOA1">APOA1</div><div class="option" data-selectable="" data-value="APOA1-AS">APOA1-AS</div><div class="option" data-selectable="" data-value="APOA2">APOA2</div><div class="option" data-selectable="" data-value="APOA5">APOA5</div><div class="option" data-selectable="" data-value="APOBEC2">APOBEC2</div><div class="option" data-selectable="" data-value="APOBEC3A">APOBEC3A</div><div class="option" data-selectable="" data-value="APOBEC3B">APOBEC3B</div><div class="option" data-selectable="" data-value="APOBEC3C">APOBEC3C</div><div class="option" data-selectable="" data-value="APOBEC3D">APOBEC3D</div><div class="option" data-selectable="" data-value="APOBEC3F">APOBEC3F</div><div class="option" data-selectable="" data-value="APOBEC3G">APOBEC3G</div><div class="option" data-selectable="" data-value="APOBEC3H">APOBEC3H</div><div class="option" data-selectable="" data-value="APOBEC4">APOBEC4</div><div class="option" data-selectable="" data-value="APOBR">APOBR</div><div class="option" data-selectable="" data-value="APOC1">APOC1</div><div class="option" data-selectable="" data-value="APOC2">APOC2</div><div class="option" data-selectable="" data-value="APOC3">APOC3</div><div class="option" data-selectable="" data-value="APOD">APOD</div><div class="option" data-selectable="" data-value="APOE">APOE</div><div class="option" data-selectable="" data-value="APOF">APOF</div><div class="option" data-selectable="" data-value="APOH">APOH</div><div class="option" data-selectable="" data-value="APOL1">APOL1</div><div class="option" data-selectable="" data-value="APOL2">APOL2</div><div class="option" data-selectable="" data-value="APOL3">APOL3</div><div class="option" data-selectable="" data-value="APOL4">APOL4</div><div class="option" data-selectable="" data-value="APOL6">APOL6</div><div class="option" data-selectable="" data-value="APOLD1">APOLD1</div><div class="option" data-selectable="" data-value="APOM">APOM</div><div class="option" data-selectable="" data-value="APOO">APOO</div><div class="option" data-selectable="" data-value="APOOL">APOOL</div><div class="option" data-selectable="" data-value="APP">APP</div><div class="option" data-selectable="" data-value="APPBP2">APPBP2</div><div class="option" data-selectable="" data-value="APPL1">APPL1</div><div class="option" data-selectable="" data-value="APPL2">APPL2</div><div class="option" data-selectable="" data-value="APRG1">APRG1</div><div class="option" data-selectable="" data-value="APRT">APRT</div><div class="option" data-selectable="" data-value="APTR">APTR</div><div class="option" data-selectable="" data-value="APTX">APTX</div><div class="option" data-selectable="" data-value="AQP1">AQP1</div><div class="option" data-selectable="" data-value="AQP11">AQP11</div><div class="option" data-selectable="" data-value="AQP12B">AQP12B</div><div class="option" data-selectable="" data-value="AQP2">AQP2</div><div class="option" data-selectable="" data-value="AQP3">AQP3</div><div class="option" data-selectable="" data-value="AQP4">AQP4</div><div class="option" data-selectable="" data-value="AQP4-AS1">AQP4-AS1</div><div class="option" data-selectable="" data-value="AQP5">AQP5</div><div class="option" data-selectable="" data-value="AQP5-AS1">AQP5-AS1</div><div class="option" data-selectable="" data-value="AQP6">AQP6</div><div class="option" data-selectable="" data-value="AQP7">AQP7</div><div class="option" data-selectable="" data-value="AQP7B">AQP7B</div><div class="option" data-selectable="" data-value="AQP8">AQP8</div></div></div></div>
+              <script type="application/json" data-for="PlotGenes1">{"plugins":["selectize-plugin-a11y"]}</script>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+        <div class="shiny-input-panel">
+          <div class="shiny-flow-layout">
+            <div>
+              <div class="form-group shiny-input-container">
+                <label class="control-label" id="KEGGSets-label" for="KEGGSets-selectized">Kegg Sets:</label>
+                <div>
+                  <select id="KEGGSets" class="shiny-input-select selectized shiny-bound-input" multiple="multiple" tabindex="-1" style="display: none;">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<option value="Spliceosome" selected="selected">Spliceosome</option><option value="Proteasome" selected="selected">Proteasome</option><option value="Ribosome" selected="selected">Ribosome</option><option value="Oxidative phosphorylation" selected="selected">Oxidative phosphorylation</option><option value="Cell cycle" selected="selected">Cell cycle</option><option value="Protein processing in endoplasmic reticulum" selected="selected">Protein processing in endoplasmic reticulum</option><option value="Glycolysis / Gluconeogenesis" selected="selected">Glycolysis / Gluconeogenesis</option><option value="Citrate cycle (TCA cycle)" selected="selected">Citrate cycle (TCA cycle)</option><option value="Apoptosis" selected="selected">Apoptosis</option><option value="Pentose phosphate pathway" selected="selected">Pentose phosphate pathway</option><option value="One carbon pool by folate" selected="selected">One carbon pool by folate</option><option value="Chemokine signaling pathway" selected="selected">Chemokine signaling pathway</option><option value="Natural killer cell mediated cytotoxicity" selected="selected">Natural killer cell mediated cytotoxicity</option><option value="Cytokine-cytokine receptor interaction" selected="selected">Cytokine-cytokine receptor interaction</option><option value="Glutathione metabolism" selected="selected">Glutathione metabolism</option></select><div class="shiny-input-select selectize-control multi plugin-selectize-plugin-a11y"><div class="selectize-input items not-full has-options has-items"><div class="item" data-value="Spliceosome">Spliceosome</div><div class="item" data-value="Proteasome">Proteasome</div><div class="item" data-value="Ribosome">Ribosome</div><div class="item" data-value="Oxidative phosphorylation">Oxidative phosphorylation</div><div class="item" data-value="Cell cycle">Cell cycle</div><div class="item" data-value="Protein processing in endoplasmic reticulum">Protein processing in endoplasmic reticulum</div><div class="item" data-value="Glycolysis / Gluconeogenesis">Glycolysis / Gluconeogenesis</div><div class="item" data-value="Citrate cycle (TCA cycle)">Citrate cycle (TCA cycle)</div><div class="item" data-value="Apoptosis">Apoptosis</div><div class="item" data-value="Pentose phosphate pathway">Pentose phosphate pathway</div><div class="item" data-value="One carbon pool by folate">One carbon pool by folate</div><div class="item" data-value="Chemokine signaling pathway">Chemokine signaling pathway</div><div class="item" data-value="Natural killer cell mediated cytotoxicity">Natural killer cell mediated cytotoxicity</div><div class="item" data-value="Cytokine-cytokine receptor interaction">Cytokine-cytokine receptor interaction</div><div class="item" data-value="Glutathione metabolism">Glutathione metabolism</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="KEGGSets-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="zfs5sm8p9t"></div><div class="multi selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="zfs5sm8p9t"></div></div></div>
+                  <script type="application/json" data-for="KEGGSets">{"plugins":["selectize-plugin-a11y"]}</script>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="shiny-input-panel">
+      <div class="shiny-flow-layout">
+        <div>
+          <div class="form-group shiny-input-container">
+            <label class="control-label" id="heatmapPlotTitle-label" for="heatmapPlotTitle">Plot Title:</label>
+            <input id="heatmapPlotTitle" type="text" class="shiny-input-text form-control shiny-bound-input" value="Plot of Estimated Effect Sizes for Atovaquone vs DMSO">
+          </div>
+        </div>
+        <div>
+          <div class="form-group shiny-input-container">
+            <label class="control-label" id="heatmapFontsize-label" for="heatmapFontsize">Font Size:</label>
+            <input id="heatmapFontsize" type="number" class="shiny-input-number form-control shiny-bound-input" value="16" min="0">
+          </div>
+        </div>
+        <div>
+          <div class="form-group shiny-input-container">
+            <label class="control-label" id="plotWidth-label" for="plotWidth">Plot Width</label>
+            <span class="irs irs--shiny js-irs-0 irs-with-grid"><span class="irs"><span class="irs-line" tabindex="0"></span><span class="irs-min" style="visibility: visible;">1</span><span class="irs-max" style="visibility: visible;">2,000</span><span class="irs-from" style="visibility: hidden;">0</span><span class="irs-to" style="visibility: hidden;">0</span><span class="irs-single" style="left: 41.9207%;">1,000</span></span><span class="irs-grid" style="width: 89.4231%; left: 5.18846%;"><span class="irs-grid-pol" style="left: 0%"></span><span class="irs-grid-text js-grid-text-0" style="left: 0%; margin-left: -2.64423%;">1</span><span class="irs-grid-pol small" style="left: 6.670001667500417%"></span><span class="irs-grid-pol small" style="left: 3.3350008337502084%"></span><span class="irs-grid-pol" style="left: 10.005002501250626%"></span><span class="irs-grid-text js-grid-text-1" style="left: 10.005%; visibility: visible; margin-left: -5.04808%;">201</span><span class="irs-grid-pol small" style="left: 16.675004168751045%"></span><span class="irs-grid-pol small" style="left: 13.340003335000834%"></span><span class="irs-grid-pol" style="left: 20.010005002501252%"></span><span class="irs-grid-text js-grid-text-2" style="left: 20.01%; visibility: visible; margin-left: -5.04808%;">401</span><span class="irs-grid-pol small" style="left: 26.68000667000167%"></span><span class="irs-grid-pol small" style="left: 23.34500583625146%"></span><span class="irs-grid-pol" style="left: 30.015007503751878%"></span><span class="irs-grid-text js-grid-text-3" style="left: 30.015%; visibility: hidden; margin-left: -5.04808%;">601</span><span class="irs-grid-pol small" style="left: 36.6850091712523%"></span><span class="irs-grid-pol small" style="left: 33.35000833750209%"></span><span class="irs-grid-pol" style="left: 40.020010005002504%"></span><span class="irs-grid-text js-grid-text-4" style="left: 40.02%; margin-left: -5.04808%;">801</span><span class="irs-grid-pol small" style="left: 46.690011672502926%"></span><span class="irs-grid-pol small" style="left: 43.35501083875271%"></span><span class="irs-grid-pol" style="left: 50.025012506253134%"></span><span class="irs-grid-text js-grid-text-5" style="left: 50.025%; visibility: hidden; margin-left: -6.85096%;">1,001</span><span class="irs-grid-pol small" style="left: 56.69501417375355%"></span><span class="irs-grid-pol small" style="left: 53.36001334000334%"></span><span class="irs-grid-pol" style="left: 60.030015007503756%"></span><span class="irs-grid-text js-grid-text-6" style="left: 60.03%; visibility: visible; margin-left: -6.85096%;">1,201</span><span class="irs-grid-pol small" style="left: 66.70001667500418%"></span><span class="irs-grid-pol small" style="left: 63.365015841253964%"></span><span class="irs-grid-pol" style="left: 70.03501750875438%"></span><span class="irs-grid-text js-grid-text-7" style="left: 70.035%; visibility: hidden; margin-left: -6.85096%;">1,401</span><span class="irs-grid-pol small" style="left: 76.7050191762548%"></span><span class="irs-grid-pol small" style="left: 73.3700183425046%"></span><span class="irs-grid-pol" style="left: 80.04002001000501%"></span><span class="irs-grid-text js-grid-text-8" style="left: 80.04%; margin-left: -6.85096%;">1,601</span><span class="irs-grid-pol small" style="left: 86.71002167750542%"></span><span class="irs-grid-pol small" style="left: 83.37502084375522%"></span><span class="irs-grid-pol" style="left: 90.04502251125564%"></span><span class="irs-grid-text js-grid-text-9" style="left: 90.045%; visibility: hidden; margin-left: -6.85096%;">1,801</span><span class="irs-grid-pol small" style="left: 96.68167417041855%"></span><span class="irs-grid-pol small" style="left: 93.36334834083709%"></span><span class="irs-grid-pol" style="left: 100%"></span><span class="irs-grid-text js-grid-text-10" style="left: 100%; visibility: visible; margin-left: -6.85096%;">2,000</span></span><span class="irs-bar irs-bar--single" style="left: 0px; width: 49.9776%;"></span><span class="irs-shadow shadow-single" style="display: none;"></span><span class="irs-handle single" style="left: 44.6892%;"><i></i><i></i><i></i></span></span><input class="js-range-slider irs-hidden-input shiny-bound-input" id="plotWidth" data-skin="shiny" data-min="1" data-max="2000" data-from="1000" data-step="1" data-grid="true" data-grid-num="9.995" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number" tabindex="-1" readonly="readonly" value="1000">
+          </div>
+        </div>
+        <div>
+          <div class="form-group shiny-input-container">
+            <label class="control-label" id="plotHeight-label" for="plotHeight">Plot Height</label>
+            <span class="irs irs--shiny js-irs-1 irs-with-grid"><span class="irs"><span class="irs-line" tabindex="0"></span><span class="irs-min" style="visibility: visible;">1</span><span class="irs-max" style="visibility: visible;">2,000</span><span class="irs-from" style="visibility: hidden;">0</span><span class="irs-to" style="visibility: hidden;">0</span><span class="irs-single" style="left: 21.7573%;">500</span></span><span class="irs-grid" style="width: 89.4231%; left: 5.18846%;"><span class="irs-grid-pol" style="left: 0%"></span><span class="irs-grid-text js-grid-text-0" style="left: 0%; margin-left: -2.64423%;">1</span><span class="irs-grid-pol small" style="left: 6.670001667500417%"></span><span class="irs-grid-pol small" style="left: 3.3350008337502084%"></span><span class="irs-grid-pol" style="left: 10.005002501250626%"></span><span class="irs-grid-text js-grid-text-1" style="left: 10.005%; visibility: visible; margin-left: -5.04808%;">201</span><span class="irs-grid-pol small" style="left: 16.675004168751045%"></span><span class="irs-grid-pol small" style="left: 13.340003335000834%"></span><span class="irs-grid-pol" style="left: 20.010005002501252%"></span><span class="irs-grid-text js-grid-text-2" style="left: 20.01%; visibility: visible; margin-left: -5.04808%;">401</span><span class="irs-grid-pol small" style="left: 26.68000667000167%"></span><span class="irs-grid-pol small" style="left: 23.34500583625146%"></span><span class="irs-grid-pol" style="left: 30.015007503751878%"></span><span class="irs-grid-text js-grid-text-3" style="left: 30.015%; visibility: hidden; margin-left: -5.04808%;">601</span><span class="irs-grid-pol small" style="left: 36.6850091712523%"></span><span class="irs-grid-pol small" style="left: 33.35000833750209%"></span><span class="irs-grid-pol" style="left: 40.020010005002504%"></span><span class="irs-grid-text js-grid-text-4" style="left: 40.02%; margin-left: -5.04808%;">801</span><span class="irs-grid-pol small" style="left: 46.690011672502926%"></span><span class="irs-grid-pol small" style="left: 43.35501083875271%"></span><span class="irs-grid-pol" style="left: 50.025012506253134%"></span><span class="irs-grid-text js-grid-text-5" style="left: 50.025%; visibility: hidden; margin-left: -6.85096%;">1,001</span><span class="irs-grid-pol small" style="left: 56.69501417375355%"></span><span class="irs-grid-pol small" style="left: 53.36001334000334%"></span><span class="irs-grid-pol" style="left: 60.030015007503756%"></span><span class="irs-grid-text js-grid-text-6" style="left: 60.03%; visibility: visible; margin-left: -6.85096%;">1,201</span><span class="irs-grid-pol small" style="left: 66.70001667500418%"></span><span class="irs-grid-pol small" style="left: 63.365015841253964%"></span><span class="irs-grid-pol" style="left: 70.03501750875438%"></span><span class="irs-grid-text js-grid-text-7" style="left: 70.035%; visibility: hidden; margin-left: -6.85096%;">1,401</span><span class="irs-grid-pol small" style="left: 76.7050191762548%"></span><span class="irs-grid-pol small" style="left: 73.3700183425046%"></span><span class="irs-grid-pol" style="left: 80.04002001000501%"></span><span class="irs-grid-text js-grid-text-8" style="left: 80.04%; margin-left: -6.85096%;">1,601</span><span class="irs-grid-pol small" style="left: 86.71002167750542%"></span><span class="irs-grid-pol small" style="left: 83.37502084375522%"></span><span class="irs-grid-pol" style="left: 90.04502251125564%"></span><span class="irs-grid-text js-grid-text-9" style="left: 90.045%; visibility: hidden; margin-left: -6.85096%;">1,801</span><span class="irs-grid-pol small" style="left: 96.68167417041855%"></span><span class="irs-grid-pol small" style="left: 93.36334834083709%"></span><span class="irs-grid-pol" style="left: 100%"></span><span class="irs-grid-text js-grid-text-10" style="left: 100%; visibility: visible; margin-left: -6.85096%;">2,000</span></span><span class="irs-bar irs-bar--single" style="left: 0px; width: 27.6107%;"></span><span class="irs-shadow shadow-single" style="display: none;"></span><span class="irs-handle single" style="left: 22.3222%;"><i></i><i></i><i></i></span></span><input class="js-range-slider irs-hidden-input shiny-bound-input" id="plotHeight" data-skin="shiny" data-min="1" data-max="2000" data-from="500" data-step="1" data-grid="true" data-grid-num="9.995" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number" tabindex="-1" readonly="readonly" value="500">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4">
+        <form class="well" role="complementary">
+          <div class="shiny-input-panel">
+            <div class="shiny-flow-layout">
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmapColorPaletteTime-label" for="heatmapColorPaletteTime-selectized">Color Palette (Time):</label>
+                  <div>
+                    <select id="heatmapColorPaletteTime" class="shiny-input-select selectized shiny-bound-input" tabindex="-1" style="display: none;">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<option value="Lajolla" selected="selected">Lajolla</option></select><div class="shiny-input-select selectize-control single plugin-selectize-plugin-a11y"><div class="selectize-input items full has-options has-items"><div class="item" data-value="Lajolla">Lajolla</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="heatmapColorPaletteTime-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="bb12016gw1"></div><div class="single selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="bb12016gw1"></div></div></div>
+                    <script type="application/json" data-for="heatmapColorPaletteTime" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmapColorPaletteTreatment-label" for="heatmapColorPaletteTreatment-selectized">Color Palette (Treatment):</label>
+                  <div>
+                    <select id="heatmapColorPaletteTreatment" class="shiny-input-select selectized shiny-bound-input" tabindex="-1" style="display: none;">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<option value="Greens 2" selected="selected">Greens 2</option></select><div class="shiny-input-select selectize-control single plugin-selectize-plugin-a11y"><div class="selectize-input items full has-options has-items"><div class="item" data-value="Greens 2">Greens 2</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="heatmapColorPaletteTreatment-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="zwvs4x71m9"></div><div class="single selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="zwvs4x71m9"></div></div></div>
+                    <script type="application/json" data-for="heatmapColorPaletteTreatment" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmapColorPaletteGeneSet-label" for="heatmapColorPaletteGeneSet-selectized">Color Palette (Gene Set):</label>
+                  <div>
+                    <select id="heatmapColorPaletteGeneSet" class="shiny-input-select selectized shiny-bound-input" tabindex="-1" style="display: none;">
+
+
+
+
+
+
+
+<option value="Harmonic" selected="selected">Harmonic</option></select><div class="shiny-input-select selectize-control single plugin-selectize-plugin-a11y"><div class="selectize-input items full has-options has-items"><div class="item" data-value="Harmonic">Harmonic</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="heatmapColorPaletteGeneSet-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="yw4drhwt66"></div><div class="single selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="yw4drhwt66"></div></div></div>
+                    <script type="application/json" data-for="heatmapColorPaletteGeneSet" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="shiny-input-panel">
+            <div class="shiny-flow-layout">
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_45-48-label" for="heatmap_label_45-48">Label for 45uM, 48 hour group:</label>
+                  <input id="heatmap_label_45-48" type="text" class="shiny-input-text form-control shiny-bound-input" value="45μM @ 48 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_30-48-label" for="heatmap_label_30-48">Label for 30uM, 48 hour group:</label>
+                  <input id="heatmap_label_30-48" type="text" class="shiny-input-text form-control shiny-bound-input" value="30μM @ 48 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_45-24-label" for="heatmap_label_45-24">Label for 45uM, 24 hour group:</label>
+                  <input id="heatmap_label_45-24" type="text" class="shiny-input-text form-control shiny-bound-input" value="45μM @ 24 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_30-24-label" for="heatmap_label_30-24">Label for 30uM, 24 hour group:</label>
+                  <input id="heatmap_label_30-24" type="text" class="shiny-input-text form-control shiny-bound-input" value="30μM @ 24 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_45-8-label" for="heatmap_label_45-8">Label for 45uM, 8 hour group:</label>
+                  <input id="heatmap_label_45-8" type="text" class="shiny-input-text form-control shiny-bound-input" value="45μM @ 8 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_30-8-label" for="heatmap_label_30-8">Label for 30uM, 8 hour group:</label>
+                  <input id="heatmap_label_30-8" type="text" class="shiny-input-text form-control shiny-bound-input" value="30μM @ 8 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_45-1-label" for="heatmap_label_45-1">Label for 45uM, 1 hour group:</label>
+                  <input id="heatmap_label_45-1" type="text" class="shiny-input-text form-control shiny-bound-input" value="45μM @ 1 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_label_30-1-label" for="heatmap_label_30-1">Label for 30uM, 1 hour group:</label>
+                  <input id="heatmap_label_30-1" type="text" class="shiny-input-text form-control shiny-bound-input" value="30μM @ 1 hours">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_time_name-label" for="heatmap_time_name">Legend label for Time:</label>
+                  <input id="heatmap_time_name" type="text" class="shiny-input-text form-control shiny-bound-input" value="Time (hours)">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_treatment_name-label" for="heatmap_treatment_name">Legend label for Treatment:</label>
+                  <input id="heatmap_treatment_name" type="text" class="shiny-input-text form-control shiny-bound-input" value="Dose (μM)">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmapShowColNames-label" for="heatmapShowColNames-selectized">Show column names?</label>
+                  <div>
+                    <select id="heatmapShowColNames" class="shiny-input-select selectized shiny-bound-input" tabindex="-1" style="display: none;">
+<option value="TRUE" selected="selected">TRUE</option></select><div class="shiny-input-select selectize-control single plugin-selectize-plugin-a11y"><div class="selectize-input items full has-options has-items"><div class="item" data-value="TRUE">TRUE</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="heatmapShowColNames-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="1pp4tovb4l"></div><div class="single selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="1pp4tovb4l"></div></div></div>
+                    <script type="application/json" data-for="heatmapShowColNames" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmapColAngle-label" for="heatmapColAngle-selectized">What angle should the column names be displayed at?</label>
+                  <div>
+                    <select id="heatmapColAngle" class="shiny-input-select selectized shiny-bound-input" tabindex="-1" style="display: none;">
+
+
+
+<option value="315" selected="selected">315</option></select><div class="shiny-input-select selectize-control single plugin-selectize-plugin-a11y"><div class="selectize-input items full has-options has-items"><div class="item" data-value="315">315</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="heatmapColAngle-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="kt2du7gvm2"></div><div class="single selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="kt2du7gvm2"></div></div></div>
+                    <script type="application/json" data-for="heatmapColAngle" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_fontsize_col-label" for="heatmap_fontsize_col">Column label fontsize:</label>
+                  <input id="heatmap_fontsize_col" type="number" class="shiny-input-number form-control shiny-bound-input" value="12" min="0">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="shiny-input-panel">
+            <div class="shiny-flow-layout">
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_fontsize_row-label" for="heatmap_fontsize_row">Gene name fontsize:</label>
+                  <input id="heatmap_fontsize_row" type="number" class="shiny-input-number form-control shiny-bound-input" value="14" min="0">
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_geneset_name-label" for="heatmap_geneset_name">Legend label for Gene Sets:</label>
+                  <input id="heatmap_geneset_name" type="text" class="shiny-input-text form-control shiny-bound-input" value="Gene sets">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="shiny-input-panel">
+            <div class="shiny-flow-layout">
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmapShowEstimate-label" for="heatmapShowEstimate-selectized">Show the estimated log2FoldChange in each box?</label>
+                  <div>
+                    <select id="heatmapShowEstimate" class="shiny-input-select selectized shiny-bound-input" tabindex="-1" style="display: none;">
+<option value="FALSE" selected="selected">FALSE</option></select><div class="shiny-input-select selectize-control single plugin-selectize-plugin-a11y"><div class="selectize-input items full has-options has-items"><div class="item" data-value="FALSE">FALSE</div><input type="text" autocomplete="new-password" autofill="no" tabindex="" id="heatmapShowEstimate-selectized" style="width: 4px;" role="combobox" aria-expanded="false" haspopup="listbox" aria-owns="q01dvwzn9d"></div><div class="single selectize-dropdown shiny-input-select plugin-selectize-plugin-a11y" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1" role="listbox" id="q01dvwzn9d"></div></div></div>
+                    <script type="application/json" data-for="heatmapShowEstimate" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container" data-shiny-input-type="colour">
+                  <label class="control-label" for="heatmapEstimateFontColor">Select Font Color for l2FC estimates:</label>
+                  <div class="colourpicker palette-square"><div class="colourpicker-input-container"><input id="heatmapEstimateFontColor" type="text" class="form-control shiny-colour-input colourpicker-input shiny-bound-input" data-init-value="black" data-show-colour="both" data-palette="square" spellcheck="false" size="7" style="color: rgb(221, 221, 221); background-color: rgb(0, 0, 0);" value="#000000"><div class="colourpicker-panel"><div class="colourpicker-slider colourpicker-sprite"><div class="colourpicker-slider-picker" style="top: 150px;"></div></div><div class="colourpicker-alpha-slider"><div class="colourpicker-alpha-inner-slider"></div><div class="colourpicker-slider-picker"></div></div><div class="colourpicker-grid"><div class="colourpicker-grid-inner colourpicker-sprite" style="background-color: rgb(255, 0, 0);"><div class="colourpicker-grid-inner-2"></div></div><div class="colourpicker-picker" style="top: 150px; left: 0px;"><div></div></div></div></div></div></div>
+                </div>
+              </div>
+              <div>
+                <div class="form-group shiny-input-container">
+                  <label class="control-label" id="heatmap_fontsize_number-label" for="heatmap_fontsize_number">Font size for l2FC estimates:</label>
+                  <input id="heatmap_fontsize_number" type="number" class="shiny-input-number form-control shiny-bound-input" value="16" min="0">
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col-sm-8" role="main">
+        <div class="card bslib-card bslib-mb-spacing html-fill-item html-fill-container" data-require-bs-caller="card()" data-require-bs-version="5">
+          <div class="card-header bslib-navs-card-title">
+            <span>Visualizations</span>
+            <ul class="nav nav-underline" data-tabsetid="9994">
+              <li class="active">
+                <a href="#tab-9994-1" data-toggle="tab" data-bs-toggle="tab" data-value="Raw Data">Raw Data</a>
+              </li>
+              <li>
+                <a href="#tab-9994-2" data-toggle="tab" data-bs-toggle="tab" data-value="Gene Set Data">Gene Set Data</a>
+              </li>
+              <li>
+                <a href="#tab-9994-3" data-toggle="tab" data-bs-toggle="tab" data-value="Heatmap">Heatmap</a>
+              </li>
+              <li>
+                <a href="#tab-9994-4" data-toggle="tab" data-bs-toggle="tab" data-value="Bar Plot">Bar Plot</a>
+              </li>
+              <li>
+                <a href="#tab-9994-5" data-toggle="tab" data-bs-toggle="tab" data-value="pathfindR - Bubble Plot">pathfindR - Bubble Plot</a>
+              </li>
+              <li>
+                <a href="#tab-9994-6" data-toggle="tab" data-bs-toggle="tab" data-value="pathfindR - Term-Gene Heatmap">pathfindR - Term-Gene Heatmap</a>
+              </li>
+              <li>
+                <a href="#tab-9994-7" data-toggle="tab" data-bs-toggle="tab" data-value="pathfindR - Upset Plot">pathfindR - Upset Plot</a>
+              </li>
+              <li>
+                <a href="#tab-9994-8" data-toggle="tab" data-bs-toggle="tab" data-value="pathfindR - Cluster (bubbles)">pathfindR - Cluster (bubbles)</a>
+              </li>
+              <li>
+                <a href="#tab-9994-9" data-toggle="tab" data-bs-toggle="tab" data-value="pathfindR - Cluster (heatmap)">pathfindR - Cluster (heatmap)</a>
+              </li>
+              <li>
+                <a href="#tab-9994-10" data-toggle="tab" data-bs-toggle="tab" data-value="pathfindR- Cluster (dendrogram)">pathfindR- Cluster (dendrogram)</a>
+              </li>
+            </ul>
+          </div>
+          <div class="tab-content html-fill-item html-fill-container" data-tabsetid="9994" style="overflow: visible;">
+            <div class="tab-pane active html-fill-item html-fill-container bslib-gap-spacing" data-value="Raw Data" id="tab-9994-1" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div id="table" class="shiny-datatable-output shiny-bound-output" aria-live="polite"><div id="DataTables_Table_0_wrapper" class="dataTables_wrapper form-inline dt-bootstrap"><div class="dataTables_length" id="DataTables_Table_0_length"><label>Show <select name="DataTables_Table_0_length" aria-controls="DataTables_Table_0" class="form-control form-control-sm input-sm"><option value="10">10</option><option value="25" selected="selected">25</option><option value="50">50</option><option value="100">100</option></select> entries</label></div><div id="DataTables_Table_0_filter" class="dataTables_filter"><label>Search:<input type="search" class="form-control form-control-sm input-sm" placeholder="" aria-controls="DataTables_Table_0"></label></div><div id="DataTables_Table_0_processing" class="dataTables_processing" style="display: none;">Processing...</div><div class="dataTables_scroll"><div class="dataTables_scrollHead" style="overflow: hidden; position: relative; border: 0px; width: 100%;"><div class="dataTables_scrollHeadInner" style="box-sizing: content-box; width: 500px; padding-right: 0px;"><table class="table table-striped table-hover dataTable" role="grid" style="margin-left: 0px; width: 500px;"><thead><tr role="row"><th class="sorting" tabindex="0" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 68.5833px;" aria-label="Gene: activate to sort column ascending">Gene</th><th class="sorting" tabindex="0" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 131.317px;" aria-label="log2FoldChange: activate to sort column ascending">log2FoldChange</th><th class="sorting" tabindex="0" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 92.8667px;" aria-label="treatment: activate to sort column ascending">treatment</th><th class="sorting" tabindex="0" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 63.2333px;" aria-label="time: activate to sort column ascending">time</th></tr></thead></table></div></div><div class="dataTables_scrollBody" style="overflow: auto; height: 650px; width: 100%;"><table class="table table-striped table-hover dataTable" id="DataTables_Table_0" role="grid" aria-describedby="DataTables_Table_0_info" style="width: 500px;"><tfoot><tr style="height: 0px;"><th rowspan="1" colspan="1" style="padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px; width: 88.5833px;"></th><th rowspan="1" colspan="1" style="padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px; width: 151.317px;"></th><th rowspan="1" colspan="1" style="padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px; width: 112.867px;"></th><th rowspan="1" colspan="1" style="padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px; width: 83.2333px;"></th></tr></tfoot><thead><tr role="row" style="height: 0px;"><th class="sorting" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 68.5833px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" aria-label="Gene: activate to sort column ascending"><div class="dataTables_sizing" style="height:0;overflow:hidden;">Gene</div></th><th class="sorting" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 131.317px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" aria-label="log2FoldChange: activate to sort column ascending"><div class="dataTables_sizing" style="height:0;overflow:hidden;">log2FoldChange</div></th><th class="sorting" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 92.8667px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" aria-label="treatment: activate to sort column ascending"><div class="dataTables_sizing" style="height:0;overflow:hidden;">treatment</div></th><th class="sorting" aria-controls="DataTables_Table_0" rowspan="1" colspan="1" style="width: 63.2333px; padding-top: 0px; padding-bottom: 0px; border-top-width: 0px; border-bottom-width: 0px; height: 0px;" aria-label="time: activate to sort column ascending"><div class="dataTables_sizing" style="height:0;overflow:hidden;">time</div></th></tr></thead><tbody><tr role="row" class="odd"><td>A1BG</td><td> 0.40696405</td><td>45</td><td>48</td></tr><tr role="row" class="even"><td>A1BG</td><td> 0.32335240</td><td>30</td><td>48</td></tr><tr role="row" class="odd"><td>A1BG</td><td>-0.12167138</td><td>45</td><td>24</td></tr><tr role="row" class="even"><td>A1BG</td><td>-0.37059280</td><td>30</td><td>24</td></tr><tr role="row" class="odd"><td>A1BG</td><td>-0.35579879</td><td>45</td><td> 8</td></tr><tr role="row" class="even"><td>A1BG</td><td> 0.13043028</td><td>30</td><td> 8</td></tr><tr role="row" class="odd"><td>A1BG</td><td>-0.50685153</td><td>45</td><td> 1</td></tr><tr role="row" class="even"><td>A1BG</td><td>-0.32282880</td><td>30</td><td> 1</td></tr><tr role="row" class="odd"><td>A1BG-AS1</td><td> 0.27115563</td><td>45</td><td>48</td></tr><tr role="row" class="even"><td>A1BG-AS1</td><td> 0.41076838</td><td>30</td><td>48</td></tr><tr role="row" class="odd"><td>A1BG-AS1</td><td> 0.19667893</td><td>45</td><td>24</td></tr><tr role="row" class="even"><td>A1BG-AS1</td><td> 0.10725440</td><td>30</td><td>24</td></tr><tr role="row" class="odd"><td>A1BG-AS1</td><td>-0.62418536</td><td>45</td><td> 8</td></tr><tr role="row" class="even"><td>A1BG-AS1</td><td>-0.20449833</td><td>30</td><td> 8</td></tr><tr role="row" class="odd"><td>A1BG-AS1</td><td> 0.05274841</td><td>45</td><td> 1</td></tr><tr role="row" class="even"><td>A1BG-AS1</td><td> 0.01720693</td><td>30</td><td> 1</td></tr><tr role="row" class="odd"><td>A1CF</td><td>-2.32059940</td><td>45</td><td>48</td></tr><tr role="row" class="even"><td>A1CF</td><td>-0.77855765</td><td>30</td><td>48</td></tr><tr role="row" class="odd"><td>A1CF</td><td> 1.59740647</td><td>45</td><td>24</td></tr><tr role="row" class="even"><td>A1CF</td><td> 0.28170154</td><td>30</td><td>24</td></tr><tr role="row" class="odd"><td>A1CF</td><td>-0.10583856</td><td>45</td><td> 8</td></tr><tr role="row" class="even"><td>A1CF</td><td>-1.46995327</td><td>30</td><td> 8</td></tr><tr role="row" class="odd"><td>A1CF</td><td>-0.65192729</td><td>45</td><td> 1</td></tr><tr role="row" class="even"><td>A1CF</td><td> 1.15231774</td><td>30</td><td> 1</td></tr><tr role="row" class="odd"><td>A2M</td><td>-0.03825486</td><td>45</td><td>48</td></tr></tbody></table></div><div class="dataTables_scrollFoot" style="overflow: hidden; border: 0px; width: 100%;"><div class="dataTables_scrollFootInner" style="width: 500px; padding-right: 0px;"><table class="table table-striped table-hover dataTable" role="grid" style="margin-left: 0px; width: 500px;"><tfoot><tr><th rowspan="1" colspan="1" style="width: 88.5833px;"><input type="text" placeholder="Gene"></th><th rowspan="1" colspan="1" style="width: 151.317px;"><input type="text" placeholder="log2FoldChange"></th><th rowspan="1" colspan="1" style="width: 112.867px;"><input type="text" placeholder="treatment"></th><th rowspan="1" colspan="1" style="width: 83.2333px;"><input type="text" placeholder="time"></th></tr></tfoot></table></div></div></div><div class="dataTables_info" id="DataTables_Table_0_info" role="status" aria-live="polite">Showing 1 to 25 of 189,088 entries</div><div class="dataTables_paginate paging_simple_numbers" id="DataTables_Table_0_paginate"><ul class="pagination"><li class="paginate_button previous disabled" aria-controls="DataTables_Table_0" tabindex="0" id="DataTables_Table_0_previous"><a href="#">Previous</a></li><li class="paginate_button active" aria-controls="DataTables_Table_0" tabindex="0"><a href="#">1</a></li><li class="paginate_button " aria-controls="DataTables_Table_0" tabindex="0"><a href="#">2</a></li><li class="paginate_button " aria-controls="DataTables_Table_0" tabindex="0"><a href="#">3</a></li><li class="paginate_button " aria-controls="DataTables_Table_0" tabindex="0"><a href="#">4</a></li><li class="paginate_button " aria-controls="DataTables_Table_0" tabindex="0"><a href="#">5</a></li><li class="paginate_button disabled" aria-controls="DataTables_Table_0" tabindex="0" id="DataTables_Table_0_ellipsis"><a href="#">…</a></li><li class="paginate_button " aria-controls="DataTables_Table_0" tabindex="0"><a href="#">7564</a></li><li class="paginate_button next" aria-controls="DataTables_Table_0" tabindex="0" id="DataTables_Table_0_next"><a href="#">Next</a></li></ul></div></div></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="Gene Set Data" id="tab-9994-2" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div id="geneset_table" class="shiny-datatable-output shiny-bound-output" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="Heatmap" id="tab-9994-3" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="expression_heatmap" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="Bar Plot" id="tab-9994-4" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="expression_barplot" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="pathfindR - Bubble Plot" id="tab-9994-5" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="pathfindR_bubbleplot" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="pathfindR - Term-Gene Heatmap" id="tab-9994-6" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="pathfindR_term_gene" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="pathfindR - Upset Plot" id="tab-9994-7" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="pathfindR_upset" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="pathfindR - Cluster (bubbles)" id="tab-9994-8" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="pathfindR_cluster_bubbles" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="pathfindR - Cluster (heatmap)" id="tab-9994-9" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="pathfindR_cluster_heat" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="tab-pane html-fill-item html-fill-container bslib-gap-spacing" data-value="pathfindR- Cluster (dendrogram)" id="tab-9994-10" style="gap:0;padding:0;">
+              <div class="card-body bslib-gap-spacing html-fill-item html-fill-container" style="margin-top:auto;margin-bottom:auto;flex:1 1 auto;">
+                <div class="shiny-plot-output html-fill-item shiny-bound-output" id="pathfindR_cluster_dend" style="width:100%;height:400px;" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<svg aria-hidden="true" focusable="false" style="width:0;height:0;position:absolute;">
+    <!-- ref: https://fvsch.com/svg-gradient-fill -->
+    <linearGradient id="bslib---icon-gradient" x1="0" y1="0" x2="1.6" y2="2.4">
+      <stop offset="0%" stop-color="var(--bslib-icon-gradient-0, #007bc2)"></stop>
+      <stop offset="14.29%" stop-color="var(--bslib-icon-gradient-1, #0770c9)"></stop>
+      <stop offset="28.57%" stop-color="var(--bslib-icon-gradient-2, #0d63da)"></stop>
+      <stop offset="42.86%" stop-color="var(--bslib-icon-gradient-3, #2b4af9)"></stop>
+      <stop offset="57.14%" stop-color="var(--bslib-icon-gradient-4, #5e29f7)"></stop>
+      <stop offset="71.43%" stop-color="var(--bslib-icon-gradient-5, #7217d7)"></stop>
+      <stop offset="100%" stop-color="var(--bslib-icon-gradient-6, #74149c)"></stop>
+    </linearGradient>
+  </svg><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"></div><div aria-live="assertive" role="log" aria-relevant="additions" aria-atomic="true" style="position: absolute; width: 1px; height: 1px; margin-top: -1px; clip: rect(1px, 1px, 1px, 1px); overflow: hidden;"><div>A1BG</div></div></body></html>
