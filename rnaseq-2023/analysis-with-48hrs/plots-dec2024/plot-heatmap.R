@@ -1,5 +1,5 @@
 
-library(shiny)
+
 library(dplyr)
 library(rlang)
 library(purrr)
@@ -10,6 +10,19 @@ library(bslib)
 library(ggplot2)
 library(colorspace)
 library(pathfindR)
+
+
+p_vals_to_stars <- Vectorize(function(p) {
+  if (p < 0.001) { return("***") }
+  if (p < 0.01) {return("**") }
+  if (p < 0.05) { return("*") }
+  if (p < 0.1) { return(".") }
+  return("")
+}, "p")
+
+get_p <- Vectorize(function(df, gene) {
+  (df %>% filter(Gene == gene))$p.adj[1]
+}, "gene")
 
 build_df <- function(
     df,
@@ -52,11 +65,13 @@ expression_heatmap <- function(
     gene_sets, # list of vectors of gene names
     
     gene_set_label = "Gene sets",
+    pval_label = "-log10 p",
     time_label = "Time (hrs)",
     treatment_label = "Treatment",
     time_color_palette = "Lajolla",
     treatment_color_palette = "Greens 2",
     gene_set_color_palette = "Harmonic",
+    pval_color_palette = "Cyan-Magenta",
     show_colnames = T,
     display_lfc = F,
     plot_title = "Heatmap of Estimated Effect Sizes for Atovaquone vs DMSO",
@@ -64,7 +79,9 @@ expression_heatmap <- function(
     fontsize_col = 14,
     fontsize_row = 14,
     fontsize_lfc = 12,
-    fontsize = 14
+    fontsize = 14,
+    p_val_to_star = T,
+    ...
 ) {
   df <- build_df(df, gene_sets)
   nsets <- length(gene_sets)
@@ -86,12 +103,16 @@ expression_heatmap <- function(
       names(df_wide)[(4+nsets):(ncol(df_wide))],
       function(x) { as.factor(strsplit(x, "_")[[1]][2]) },
       USE.NAMES = F
-    )
+    ) 
   )
   rownames(coldata) <- colnames(as.matrix(df_wide[,(4+nsets):(ncol(df_wide))]))
   
-  rowdata <- data.frame("Gene sets" = df_wide$group)
+  rowdata <- data.frame(
+    "Gene sets" = df_wide$group,
+    "-log10 p" = -log10(get_p(df, df_wide$Gene))
+  )
   colnames(rowdata)[1] <- gene_set_label
+  colnames(rowdata)[2] <- pval_label
   x <- as.matrix(df_wide[,(4+nsets):(ncol(df_wide))])
   colnames(x) <- (coldata %>% 
                     mutate(name = paste(treatment, "μM @ ", time, " hours", sep = ""))
@@ -103,6 +124,7 @@ expression_heatmap <- function(
   colnames(coldata)[colnames(coldata) == "time"] <- time_label
   colnames(coldata)[colnames(coldata) == "treatment"] <- treatment_label
   rownames(x) <- df_wide$Gene
+  
   rownames(rowdata) <- df_wide$Gene
   annotation_colors <- list(
     time = setNames(
@@ -131,6 +153,15 @@ expression_heatmap <- function(
         )[which(unique(rowdata[,1]) == x)]
       }), 
       nm = unique(rowdata[,1])
+    ),
+    pval = setNames(
+      object = sapply(unique(rowdata[,2]), function(x) {
+        hcl.colors(
+          length(unique(rowdata[,2])),
+          pval_color_palette
+        )[which(unique(rowdata[,2]) == x)]
+      }),
+      nm = unique(rowdata[,2])
     )
   )
   names(annotation_colors)[2] <- treatment_label
@@ -160,6 +191,7 @@ expression_heatmap <- function(
     #   }
     #   labels
     # },
-    breaks = seq(-max(abs(df$log2FoldChange), na.rm = T), max(abs(df$log2FoldChange), na.rm=T), length.out = 101)
+    breaks = seq(-max(abs(df$log2FoldChange), na.rm = T), max(abs(df$log2FoldChange), na.rm=T), length.out = 101),
+    ...
   )
 }

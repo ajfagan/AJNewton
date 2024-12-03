@@ -11,7 +11,9 @@ knitr::opts_chunk$set(
   cache=T,
   message=F,
   include=T,
-  warning=F
+  warning=F,
+  fig.height = 10,
+  fig.width = 10
 )
 ```
 
@@ -363,10 +365,12 @@ de.time <- de.time %>%
 
 # Gene Set Exploration
 
-```{r}
+```{r, cache=F}
 source("plot-heatmap.R")
 source("expression-barplot.R")
+```
 
+```{r}
 genesets <- list(
   "Oxidative stress" = list(
     "Redox" = c(
@@ -537,14 +541,15 @@ genesets[["Oxidative stress"]]
 First we plot a heatmap.
 
 ```{r}
-expression_heatmap(de.time, genesets[["Oxidative stress"]])
+expression_heatmap(de.time, genesets[["Oxidative stress"]], width = 8000, height = 8000)
 ```
 
 And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Oxidative stress"]])
+expression_barplot(de.time, genesets[["Oxidative stress"]], x_offset = 2.7) +
+  scale_x_continuous(limits = c(-5, 4))
 ```
 
 
@@ -569,7 +574,8 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Cell cycle"]])
+expression_barplot(de.time, genesets[["Cell cycle"]]) +
+  scale_x_continuous(limits = c(-2.05, 0.5))
 ```
 
 
