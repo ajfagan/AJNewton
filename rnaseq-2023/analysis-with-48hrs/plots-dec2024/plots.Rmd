@@ -1,0 +1,770 @@
+---
+title: "Plots for Mayra"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(
+  echo=F,
+  cache=T,
+  message=F,
+  include=T,
+  warning=F
+)
+```
+
+```{r, warning=F, message=F, include=F, results='hide'}
+alpha = 0.01
+n = 10
+library(DESeq2)
+library(dplyr)
+library(rlang)
+library(purrr)
+library(tidyverse)
+library(pheatmap)
+library(colourpicker)
+library(bslib)
+library(ggplot2)
+library(colorspace)
+library(pathfindR)
+library(org.Hs.eg.db)
+library(RColorBrewer)
+```
+
+
+```{r, include=F}
+df <- read.csv("expression.mat", sep = "\t", row.names=1)
+df.coding <- df[rowSums(df) > 0, ]
+df.gene <- df.coding
+df.gene$gene <- rownames(df.gene)
+cts <- df.gene %>%
+  mutate(
+    symbol = (
+      AnnotationDbi::select(org.Hs.eg.db, columns = c("ENSEMBL", "SYMBOL"), keys = rownames(df.coding), keytype = "ENSEMBL") %>%
+        group_by(ENSEMBL) %>%
+        summarize(SYMBOL = SYMBOL[1]) %>%
+        data.frame(row.names = "ENSEMBL")
+    )[gene, "SYMBOL"]
+  ) %>%
+  filter(!is.na(symbol)) %>%
+  group_by(symbol) %>%
+  summarise_at(1:36, sum) %>%
+  data.frame(row.names = 1) %>%
+  round()
+
+head(cts) 
+```
+
+# DE Analysis
+
+```{r include=F}
+coldata <- data.frame(
+  treatment = factor(c(30, 30, 30, 45, 45, 45, "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", 30,30,30,30,30,30,30,30,30,45,45,45,45,45,45,45,45,45), levels = c("D", 30, 45)),
+  time = factor(c(48,48,48,48, 48,48,1,1,1,24,24,24,8,8,8,48,48,48,1,1,1,24,24,24,8,8,8,1,1,1,24,24,24,8,8,8), levels = c(1, 8, 24, 48)),
+  batch = as.factor(c("d", "d", "d", "d", "d", "d", "b", "c", "a", "b", "c", "a", "b", "c", "a", "d", "d", "d", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a"))
+)
+coldata$batchA <- coldata$batch == "a"
+
+dds <- DESeqDataSetFromMatrix(
+  countData = cts, 
+  colData = coldata,
+  design = ~ treatment*time + batchA
+)
+
+dds <- DESeq(dds, reduced = ~time + batchA, test = "LRT")
+#dds <- DESeq(dds, reduced = ~treatment + batchA, test = "LRT")
+```
+
+
+# Data visualization
+
+First, we plot a hierarchical clustering of the data according to the raw estimated number of counts.
+The plot shows that batches a, b/c, and d have huge differences between them, which cause the batch effect to be much more prevalent than either the treatment or time effect.
+In particular, batch a seems much further than the others, while batch d seems fairly close to b/c.
+Batch d contains only samples after 48 hours, so differences between it and b/c are unsurprising.
+
+```{r hierarchical-clustering, echo=FALSE, warning=FALSE, message=FALSE}
+ntd <- normTransform(dds)
+sampleDists <- dist(t(assay(ntd)))
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(ntd$time, ntd$treatment, ntd$group, sep="-")
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+
+
+
+A PCA plot supports this notion. 
+This one seems to suggest that the vast majority of variance in the data can be attributed to variation between batch a, and the others. 
+After that, the next largest contributor to variance seems to be differentiating between groups b/c and d, and, finally, between b and c.
+
+```{r pca-plot, echo=FALSE, warning=FALSE, message=FALSE}
+plotPCA(ntd, intgroup = c("batch"), pcsToUse = 1:2)
+```
+
+
+
+
+
+After normalizing, we model our data as 
+\[
+  \log_2y_{gitjk} = \mu_g + {\rm Treatment}_{gi} + {\rm Time}_{gt} + {\rm TreatmentTime}_{git} + {\rm BatchA}_{gj} + \varepsilon_{gitjk},
+\]
+a linear model with an interaction between time and treatment, which includes a batch effect for batch A to account for varying levels of gene $g$ in DMSO after 1 hour in the batch A group compared to the rest.
+The null model is set as
+\[
+  \log_2y_{gitjk} = \mu_g + {\rm Time}_{gt} + {\rm BatchA}_{gj} + \varepsilon_{gitjk},
+\]
+which still contains the batch adjustment, but now asserts that there is no treatment effect on the log-counts.
+
+
+
+For each gene, we conduct a LRT to compare the full model to the reduced, null model, and, from that obtain a $p$-value. 
+Those $p$-values are then adjusted using the Benjamini-Hochberg correction, to obtain an estimated False Discovery Rate.
+False Discovery Rate cutoff is set at 0.01.
+
+We also extract from that model the MLE of the $\log_2$-fold change between DMSO and IC75 Atovaquone, each at 48 hours, to model the effect size of the treatment.
+The genes with the lowest FDR are reported here.
+
+```{r}
+res <- as.data.frame(results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  1 # 45 and 48 hrs
+)))
+
+resOrdered <- res[complete.cases(res),]
+resOrdered  <- resOrdered[order(resOrdered$pvalue),]
+resOrdered <- resOrdered[resOrdered$padj < 0.01,]
+
+res %>% 
+  arrange(padj) %>%
+  dplyr::select(log2FoldChange, pvalue, padj) %>%
+  head(n) %>%
+  mutate_if(is.numeric, ~ as.character(signif(., 3))) %>%
+  knitr::kable()
+```
+
+
+To further investigate these genes, a heatmap showing the residuals under the null model that the values are dependent only on time is displayed.
+Each row is a gene (marked on the left, along with the estimated FDR), and each column is a sample.
+Higher residuals (more red) imply that the genes in that sample are more highly expressed than on average across samples. 
+
+Looking at the one-hour columns, we see that there is often little variation between the three treatments.
+However, DDIT3, in the presence of IC75 atovaquone, does seem to be elevated compared to DMSO after only one hour.
+
+```{r residual-heatmap, echo=FALSE, warning=FALSE, message=FALSE}
+null_df <- DESeqDataSetFromMatrix(
+  countData = cts,
+  colData = coldata,
+  design = ~ time + batchA
+)
+null_df <- DESeq(null_df, reduced = ~ batchA, test = "LRT")
+
+log2mu <- log2(1 + t(t(assays(null_df)[["mu"]]) / sizeFactors(null_df)))
+resids <- log2(1 + counts(null_df, normalized = TRUE)) - log2mu
+
+nselect <- 20
+select <- rownames(resOrdered)[1:nselect]
+resids <- resids[select,]
+
+ord <- order(coldata$treatment, as.numeric(coldata$time), coldata$batchA)
+resids <- resids[,ord]
+df <- coldata[ord,] %>% dplyr::select(-c(batch, batchA))
+rownames(df) <- colnames(resids)
+
+rownames(resids) <- paste(1:nselect, '. ', rownames(resids), sep = "")
+
+pheatmap(resids, cluster_rows=FALSE, show_rownames=TRUE, show_colnames = FALSE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+
+
+```{r de-over-time}
+# 75 v DMSO @ 48
+de.time <- data.frame(
+  fc45.D.48 = results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  1 # 45 and 48 hrs
+))$log2FoldChange
+)
+
+# 30 v DMSO @ 48
+de.time$fc30.D.48 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  1, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 45 v DMSO @ 24
+de.time$fc45.D.24 <- results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  1, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 30 v DMSO @ 24
+de.time$fc30.D.24 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  1, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 45 v DMSO @ 8
+de.time$fc45.D.8 <- results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  1, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 30 v DMSO @ 8
+de.time$fc30.D.8 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  1, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 45 v DMSO @ 1
+de.time$fc45.D.1 <- results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 30 v DMSO @ 1
+de.time$fc30.D.1 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+rownames(de.time) <- rownames(results(dds))
+de.time <- de.time[complete.cases(de.time),]
+
+gene_ord_all <- list(
+  "p" = rownames(results(dds)[order(res$padj, decreasing = F),]),
+  "up" = rownames(results(dds)[order(res$log2FoldChange, decreasing = T),]),
+  "down" = rownames(results(dds)[order(res$log2FoldChange, decreasing = F),]),
+  'any' = rownames(results(dds)[order(abs(res$log2FoldChange), decreasing = T),])
+)
+gene_ord <- sapply(gene_ord_all, function(x) {
+  x <- x[!is.na(results(dds)[x,"padj"]) & (results(dds)[x,"padj"] < 0.05)]
+}, USE.NAMES = T, simplify = F)
+gene_ord[['p']] <- gene_ord_all[['p']]
+
+de.time <- de.time[complete.cases(de.time),]
+
+de.time <- de.time %>%
+  tibble::rownames_to_column(var = "Gene") %>%
+  pivot_longer(cols = 2:9) %>%
+  mutate(treatment = as.numeric(substr(name, 3, 4))) %>%
+  mutate(time = as.numeric(substr(name, 8, 9))) %>%
+  dplyr::select(-name) %>%
+  rename(log2FoldChange = value) %>%
+  mutate(p.adj = res[Gene,"padj"])
+```
+
+# Gene Set Exploration
+
+```{r}
+source("plot-heatmap.R")
+source("expression-barplot.R")
+
+genesets <- list(
+  "Oxidative stress" = list(
+    "Redox" = c(
+      "SLC7A11", 
+      "CHAC1", 
+      "MTHFD2", 
+      "SOD2",
+      "SESN2",
+      "GDF15",
+      "GADD45A",
+      "TXNIP"
+    ),
+    "DNA repair" = c(
+      "UNC5B",
+      "DDIT4",
+      "RBBP8",
+      "LONP1"
+    )
+  ),
+  "Cell cycle" = list(
+    "Mitotic checkpoint" = c(
+      "BUB1", "BUB1B", "BUB3"
+    ),
+    "DNA replication initiation" = c(
+      "MCM10", "MCM4", "MCM7"
+    )
+  ),
+  "RNA and protein processing" = list(
+    "Spliceosome" = c(
+      "DDX23",
+      "DDX24",
+      "DDX3X" # DDX3X3
+    ),
+    "Proteasome" = c(
+      "PSMC2",
+      "PSMD1",
+      "PSMD12", 
+      "PSMD6",
+      "PSMB2"
+    ),
+    "Ribonucleoprotein complex" = c(
+      "SNRPD3",
+      "SNRPD1",
+      "SNRPB2",
+      "HNRNPH2",
+      "HNRNPM",
+      "HNRNPF",
+      "HNRNPDL",
+      "HNRNPR",
+      "HNRNPU",
+      "HNRNPD",
+      "HNRNPA1"
+    ),
+    "Serine and arginine-rich splicing factors" = c(
+      "SRSF3",
+      "SRSF2",
+      "SRSF11",
+      "SRSF10",
+      "SRSF1"
+    )
+  ),
+  "Glycolysis and pentose phosphate pathway" = list(
+    "Glycolysis and pentose phosphate pathway" = c(
+      "GPI",
+      "ALDOA",
+      "G6PD",
+      "PGLS"
+    )
+  ),
+  "Folate cycle" = list(
+    "Folate cycle" = c("ALDH1L2", "MTHFD2", "MTHFDL1L", "SHMT2", "DHFR")
+  ),
+  "Glutathione synthesis" = list(
+    "Glutathione synthesis" = c(
+      "GCLC",
+      "GCLM",
+      "CTH",
+      "CBS",
+      "SLC7A11"
+    )
+  ),
+  "Protein processing in ER" = list(
+    "ER chaperones" = c(
+      "CALR",
+      "HSPA1L",
+      'HSPA8',
+      'DNAJA1',
+      'HSPA90AA1',
+      'HSPA90AB1',
+      'HSPA90B1',
+      'HSPH1'
+    ),
+    "Protein processing machinery" = c(
+      "SEC61B",
+      'STT3B',
+      'OSTC'
+    ),
+    "Protein quality control" = c(
+      "DAD1",
+      'UBQLN1',
+      'UBQLN2',
+      'SKP1',
+      'CUL1',
+      'TRAM1L1'
+    ),
+    'ER-associated protein degradation' = c(
+      'GANAB',
+      'RAD23A',
+      'SEL1L',
+      'SEL1L3',
+      'HERPUD1',
+      'SYVN1'
+    ),
+    "ER quality control" = c(
+      'UGGT2',
+      'DNAJC10',
+      'DNAJC1',
+      'MOGS'
+    ),
+    "Unfolded protein response" = c(
+      'ATF4',
+      'ATF6',
+      'ERN1',
+      'XBP1',
+      'DDIT3'
+    )
+  ),
+  'CHOP-regulated genes' = list(
+    'CHOP-regulated genes' = c(
+      'TRIB3',
+      'TNFRSF10B',
+      'GADD34',
+      'KLHDC7B',
+      'BBC3',
+      'PMAIP1',
+      'HRK'
+    )
+  ),
+  'Natural killer cell ligands' = list(
+    'Natural killer cell ligands' = c(
+      'MICB',
+      'ULBP1',
+      'ULBP2'
+    )
+  ),
+  "Immune-related genes" = list(
+    "Chemokines" = c(
+      'CXCL8',
+      'CXCL16',
+      'CXCL10'
+    ),
+    "Death receptors" = c(
+      'TNFRSF10A',
+      'TNFRSF10B'
+    )
+  )
+)
+```
+
+## Oxidative stress
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Oxidative stress"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Oxidative stress"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Oxidative stress"]])
+```
+
+
+
+
+
+## Cell cycle
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Cell cycle"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Cell cycle"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Cell cycle"]])
+```
+
+
+## RNA and protein processing
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["RNA and protein processing"]]
+```
+
+TODO: DDX3X3 was not in the gene list. I replaced it with DDX3X.
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["RNA and protein processing"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["RNA and protein processing"]])
+```
+
+
+
+## Oxidative stress
+
+This super category is defined by the genes
+
+```{r}
+genesets[["Glycolysis and pentose phosphate pathway"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Glycolysis and pentose phosphate pathway"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Glycolysis and pentose phosphate pathway"]])
+```
+
+
+
+
+## Folate cycle
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Folate cycle"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Folate cycle"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Folate cycle"]])
+```
+
+
+
+## Glutathione synthesis
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Glutathione synthesis"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Glutathione synthesis"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Glutathione synthesis"]])
+```
+
+
+
+## Protein processing in ER
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Protein processing in ER"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Protein processing in ER"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Protein processing in ER"]])
+```
+
+
+
+## CHOP-regulated genes
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["CHOP-regulated genes"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["CHOP-regulated genes"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["CHOP-regulated genes"]])
+```
+
+
+
+## Natural killer cell ligands
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Natural killer cell ligands"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Natural killer cell ligands"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Natural killer cell ligands"]])
+```
+
+
+
+## Immune-related genes
+
+This super category is defined by the sub-categories as
+
+```{r}
+genesets[["Immune-related genes"]]
+```
+
+First we plot a heatmap.
+
+```{r}
+expression_heatmap(de.time, genesets[["Immune-related genes"]])
+```
+
+And then a barplot.
+
+
+```{r}
+expression_barplot(de.time, genesets[["Immune-related genes"]])
+```
+
+
+
+
+
+
+
+
+
+
+
