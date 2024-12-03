@@ -85,7 +85,6 @@
             \item A 96-well plate was populated with the cancer cell line OVCAR3.
             \item Then, the wells were treated with various combinations of Atovaquone, Brusatol, and control (DMSO).
             \item After 72 hours, the plates were fed through a plate-reader that determines the Optical Density (OD) in each well.
-            \item Statistical Methodology: to be explained.
         \end{itemize}
     \end{block}
 
@@ -135,11 +134,321 @@
         \item Antagonistic
     \end{itemize}
    
-    What it means for two drugs to be synergistic or antagonistic seems intuitive.
-    However, the meaning of drug \textit{additivity} is much less clear, and there are several dozen different definitions.
-    This makes actually quantifying the notion of synergy and antagonism much more
+    \vfill 
+    \begin{itemize}
+      \item What it means for two drugs to be synergistic or antagonistic seems intuitive.
+      \item However, the meaning of drug \textit{additivity} is much less clear, and there are several dozen different definitions.
+      \item This makes actually quantifying the notion of synergy and antagonism much more
+    \end{itemize}
 
 \end{frame}
+\begin{frame}{Example: Atovaquone and Brusatol Inference}
+    Atovaquone and Brusatol \begin{itemize}[<+->]\color{gray}
+      \item \color<.>{black} had very small \alert{Loewe} synergy scores for small doses of Atovaquone, but ultimately, was not overall statistically significant
+      \item \color<.>{black} was statistically significantly antagonistic via \alert{Bliss}/\alert{ZIP} 
+      \item \color<.>{black} had several dose-combinations which were statistically significantly \alert{HSA} antagonistic
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{This is weird}
+
+
+    \begin{columns}
+        \begin{column}{0.7\textwidth}
+            \begin{center}
+                \includegraphics[width = 0.9\textwidth]{figs/nrf2-pathway-annotated.png}
+
+
+        \hspace*{15pt}\hbox{\scriptsize Credit:\thinspace{\scriptsize\itshape The Effect of Nrf2 on Diabetic Complications, Reis et. al., 2016}}
+            \end{center}
+        \end{column}
+        \begin{column}{0.3\textwidth}
+            
+            Possible explanations: \begin{itemize}
+                \item \alert{Brusatol might need to be introduced first}
+                \item Brusatol has other effects
+                \item Second pathway
+                \item Error
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Efficacy and Toxicity}
+
+\begin{frame}{Goals for Drug Combinations}
+    Recall drug combinations goals/promises:
+    \begin{itemize}
+        \item Overcoming resistance \only<2>{\checkmark}
+        \item Increasing effectiveness \only<2>{\checkmark}
+        \item \alert<2>{Decreasing toxicity}
+        \item Repurposing existing drugs \only<2>{\checkmark}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Relevant XKCD}
+    \begin{center}
+        \includegraphics[height=0.7\textheight]{figs/xkcd-cells.png}
+
+        \hspace*{15pt}\hbox{\scriptsize Credit:\thinspace{\scriptsize\itshape XKCD - Cells: https://xkcd.com/1217/}}
+    \end{center}
+\end{frame}
+
+
+\begin{frame}{Synergy Can Be Undesirable}
+    Synergy tells us we can achieve a similar inhibitory effect using ``less drug''
+    \begin{itemize}[<+->]\color{gray}
+        \item \color<.>{black} Not, inherently, a beneficial result
+        \item \color<.>{black} This effect may be as great or greater in healthy cells 
+        \item \color<.>{black} Beaten resistances may be necessary for healthy cells to survive
+    \end{itemize}
+    \only<4>{
+        The ideal drug combination would be synergistic(?), and more potent in cancerous tissue than in healthy.
+    }
+    \vfill 
+    \only<4>{
+        \centering
+        A more general metric would consider \alert{synergy}, while comparing \alert{efficacy} and \alert{toxicity}.
+    }
+\end{frame}
+
+\begin{frame}{U-shaped Dose Response Curves}
+    \centering
+    % \includegraphics[width=0.8\textwidth]{figs/constant_rate_16to6.25.png}
+    \only<1>{
+        \includegraphics[width=0.9\textwidth]{figs/response-heatmap-all.png}
+    }
+    \only<2>{
+        \includegraphics[width=0.8\textwidth]{figs/response-heatmap-all-annotated.png}
+    }
+\end{frame}
+
+
+\begin{frame}{DrugCombDB - Cancer Cell Lines}
+    DrugCombDB, and similar databases, contain no data on healthy tissue.
+    \begin{center}
+        \includegraphics[width = 0.9\textwidth]{figs/drug-comb-cancer-cells.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{SynToxProfiler}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/syntoxprofiler.jpg}
+
+    \hspace*{15pt}\hbox{\scriptsize Credit:\thinspace{\scriptsize\itshape Ianevski et. al., 2020}}
+\end{frame}
+
+
+\begin{frame}{SynToxProfiler Methods}
+    Calculate (normalized) volume under 
+    \begin{itemize}
+        \item $E_{AB}$: Efficacy curve (cancer tissue)
+        \item $T_{AB}$: Toxicity curve (healthy tissue)
+        \item $S_{AB}$: Synergy curve (cancer tissue)
+    \end{itemize}
+    \vfill
+    For each combination, calculate and rank by STE score 
+    \[
+        {\rm STE}_{AB} = \frac{{\rm rank}(S_{AB}) + {\rm rank}(E_{AB} - T_{AB})}{2N}
+    \]
+\end{frame}
+
+\begin{frame}{SynToxProfiler Test}
+  TODO: Discuss the course project I did for Christina's course.
+
+  \vfill
+
+  Moral: SynToxProfiler screened out at least one drug combination that had a very high synergy but very poor selective efficacy, and that combination was found to be overly toxic in clinical trials.
+\end{frame}
+
+\section{Proposed Research Topics}
+
+\subsection{Synergy Score Aggregation}
+
+\begin{frame}
+  \frametitle{Synergy Score Aggregation}
+  Many of the most popular methods of determining synergy are \textit{non-parametric}, which means we estimate a \alert{different synergy score for each dose-combination}.
+
+  \vfill
+  To make a decision of additive vs synergistic vs antagonistic, we need to aggregate this 3D data into a single value.
+  \begin{enumerate}
+    \item Pick your favorite (common in non-methods literature)
+    \item Sum all the synergy scores 
+    \item TODO: others?
+  \end{enumerate}
+
+  These have problems:
+  \begin{enumerate}
+    \item Ignores opposite effects elsewhere, allows for biased selection of ``favorite''.
+    \item Removes relevant features of the 3D curve\begin{itemize}
+	\item For example, do we see synergy in high dose of A and low dose of B, but antagonism when switched?
+      \end{itemize}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Synergy Score Aggregation}
+  \begin{center}
+    {\Large{\alert
+      {Is there a better method of aggregating synergy scores?}}
+    }
+  \end{center}
+  \vfill
+  \begin{enumerate}
+    \item Generate both a synergy ($\max\{f, 0\}$) and an antagonism ($\min\{f, 0\}$) score separately. 
+      \begin{itemize}
+	\item Doesn't let antagonistic regions drag down synergistic regions
+	\item May allow a combination to be all three of additive, synergistic, and antagonistic
+      \end{itemize}
+    \item Look for \textit{large, connected} dose-combination regions with high synergy.
+      \begin{itemize}
+	\item Hopes to make claims such as ``high doses of A react synergistically with low doses of B''.
+      \end{itemize}
+  \end{enumerate}
+\end{frame}
+
+
+\begin{frame}{Example: Loewe Synergy for Atovaquone-Brusatol}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/loewe-heatmap.png}
+\end{frame}
+
+\subsection{Network-Based Synergy}
+
+\begin{frame}
+  \frametitle{Network Analysis of Synergy}
+  Many modern methods (TODO: citations) incorporate gene or protein interaction networks to supplement synergy analysis through, e.g.
+  \begin{itemize}
+    \item Prediction, especially in HTS contexts
+    \item Explaining synergy outcomes
+  \end{itemize}
+  
+  \vfill 
+  However, to the best of my knowledge, nobody has ever defined \alert{synergy \textit{within} a network}.
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Synergy within Networks}
+
+  Such a method would seek to find subnetworks of, say, a GRN that are ``especially (in)active'' in the presence of the drug combination than would be expected if there drugs didn't interact.
+
+  \vfill
+  Potential benefits:
+  \begin{enumerate}
+    \item Networks can inherently convey information on relationships between drugs 
+    \item May answer more pertinent questions --- synergism within a subnetwork similar to a gene set can enable qualitative analysis of the potential therapeutic benefit of the combination 
+    \item Networks are cool and flashy
+  \end{enumerate}
+  Cons:
+  \begin{enumerate}
+    \item More expensive and time-consuming analyses would be needed, such as RNASeq.
+    \item TODO: Others?
+  \end{enumerate}
+\end{frame}
+
+ 
+\subsection{Non-monotonic Dose-Response Curves}
+
+\begin{frame}
+  \frametitle{Non-monotonic Dose-Response Curves}
+
+    \centering
+    % \includegraphics[width=0.8\textwidth]{figs/constant_rate_16to6.25.png}
+    
+    \includegraphics[width=0.8\textwidth]{figs/response-heatmap-all-annotated.png}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]
+    \frametitle{References}
+    \bibliographystyle{amsalpha}
+    \bibliography{main.bib}
+    \nocite{CHENG2021111652}
+    \nocite{CHOU1976253}
+    \nocite{Ianevski2020-sv}
+    \nocite{drugcombdb}
+    \nocite{synergyfinder}
+\end{frame}
+
+\section{Supplementary}
+
+
+\subsection{Monotherapeutic Dose-Response Curves}
+
+\begin{frame}{Median-Effect Equation}
+
+    \begin{definition}[Median-Effect Equation (MEE)]
+        \[
+            \log\frac{f_a}{1 - f_a} = n\log D - n \log D_m,
+        \]
+        where
+        \begin{itemize}
+            \item $f_a$ is the \textit{fraction effected} of a receptor
+            \item $D$ is the dose of ligand
+            \item $D_m$ is the \textit{median effect dose}
+            \item $n$ is the \textit{Hill coefficient}
+        \end{itemize}
+    \end{definition}
+
+    \begin{itemize}
+        \item Governs how concentration of ligand influences the proportion of receptors effected
+        \item Derived by Ting-Chao Chou in 1976 from the mass effect law
+        \item Provides a nice justification for linear models
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Atovaquone/Brusatol MEE Curves}
+    Define \[
+        Survival_{ijk} = OD_{ijk} / \max_{i'}\{OD_{i'jk}\}
+    \]
+    for the $i$th well in the $j$th plate and $k$th set.
+    \begin{figure}
+        \centering
+        \begin{subfigure}{0.5\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth]{figs/ato-survival.png}
+        \end{subfigure}%
+        \begin{subfigure}{0.5\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth]{figs/bru-survival.png}
+        \end{subfigure}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{4 Parameter Logistic Regression}
+    \begin{Definition}[4 Parameter Logistic (4PL) Curve]
+        \[
+            f(D) = \eta_0 + \frac{\eta_f - \eta_0}{1 + \left(\frac{D}{D_m}\right)^{-n}},
+        \]
+        where \begin{itemize}
+            \item $\eta_0$ is the \textit{minimal effect}
+            \item $\eta_f$ is the \textit{maximal effect}
+        \end{itemize}
+    \end{Definition}
+    \vfill
+    \begin{itemize}
+        \item Generalizes the Hill equation 
+        \item Enables minimal and maximal effects 
+        \item No longer has a nice linear form 
+        \item Still asserts monotonicity
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Atovaquone/Brusatol 4PL Curves}
+    \begin{figure}
+        \centering
+        \begin{subfigure}{0.5\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth, height = 0.6\textheight]{figs/ato4pl.png}
+        \end{subfigure}%
+        \begin{subfigure}{0.5\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth, height = 0.6\textheight]{figs/bru4pl.png}
+        \end{subfigure}
+    \end{figure}
+\end{frame}
+
 
 \begin{frame}{Loewe Additivity}
     \begin{definition}[Loewe Additivity]
@@ -393,221 +702,6 @@
     \end{itemize}
 \end{frame}
     
-\begin{frame}{Atovaquone and Brusatol Inference}
-    Atovaquone and Brusatol \begin{itemize}[<+->]\color{gray}
-        \item \color<.>{black} had very small Loewe synergy scores for small doses of Atovaquone, but ultimately, was not overall statistically significant
-        \item \color<.>{black} was statistically significantly antagonistic via Bliss/ZIP 
-        \item \color<.>{black} had several dose-combinations which were statistically significantly HSA antagonistic
-        \item \color<.>{black} Therefore, we conclude that Atovaquone and Brusatol have an antagonistic relationship with eachother.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{This is weird}
-
-
-    \begin{columns}
-        \begin{column}{0.7\textwidth}
-            \begin{center}
-                \includegraphics[width = 0.9\textwidth]{figs/nrf2-pathway-annotated.png}
-
-
-        \hspace*{15pt}\hbox{\scriptsize Credit:\thinspace{\scriptsize\itshape The Effect of Nrf2 on Diabetic Complications, Reis et. al., 2016}}
-            \end{center}
-        \end{column}
-        \begin{column}{0.3\textwidth}
-            
-            Possible explanations: \begin{itemize}
-                \item \alert<2>{Brusatol might need to be introduced first}
-                \item Brusatol has other effects
-                \item Second pathway
-                \item Error
-            \end{itemize}
-        \end{column}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Follow-up}
-    \centering
-    \includegraphics[width=0.8\textwidth]{figs/timed-synergy.png} 
-\end{frame}
-
-\section{Efficacy and Toxicity}
-
-\begin{frame}{Goals for Drug Combinations}
-    Recall drug combinations goals/promises:
-    \begin{itemize}
-        \item Overcoming resistance \only<2>{\checkmark}
-        \item Increasing effectiveness \only<2>{\checkmark}
-        \item \alert<2>{Decreasing toxicity}
-        \item Repurposing existing drugs \only<2>{\checkmark}
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Relevant XKCD}
-    \begin{center}
-        \includegraphics[height=0.7\textheight]{figs/xkcd-cells.png}
-
-        \hspace*{15pt}\hbox{\scriptsize Credit:\thinspace{\scriptsize\itshape XKCD - Cells: https://xkcd.com/1217/}}
-    \end{center}
-\end{frame}
-
-
-\begin{frame}{Synergy Can Be Undesirable}
-    Synergy tells us we can achieve a similar inhibitory effect using ``less drug''
-    \begin{itemize}[<+->]\color{gray}
-        \item \color<.>{black} Not, inherently, a beneficial result
-        \item \color<.>{black} This effect may be as great or greater in healthy cells 
-        \item \color<.>{black} Beaten resistances may be necessary for healthy cells to survive
-    \end{itemize}
-    \only<4>{
-        The ideal drug combination would be synergistic, and more potent in cancerous tissue than in healthy.
-    }
-    \vfill 
-    \only<4>{
-        \centering
-        A more general metric would consider \alert{synergy}, while comparing \alert{efficacy} and \alert{toxicity}.
-    }
-\end{frame}
-
-\begin{frame}{U-shaped Dose Response Curves}
-    \centering
-    % \includegraphics[width=0.8\textwidth]{figs/constant_rate_16to6.25.png}
-    \only<1>{
-        \includegraphics[width=0.9\textwidth]{figs/response-heatmap-all.png}
-    }
-    \only<2>{
-        \includegraphics[width=0.8\textwidth]{figs/response-heatmap-all-annotated.png}
-    }
-\end{frame}
-
-
-\begin{frame}{DrugCombDB - Cancer Cell Lines}
-    DrugCombDB, and similar databases, contain no data on healthy tissue.
-    \begin{center}
-        \includegraphics[width = 0.9\textwidth]{figs/drug-comb-cancer-cells.png}
-    \end{center}
-\end{frame}
-
-\begin{frame}{SynToxProfiler}
-    \centering
-    \includegraphics[width=0.9\textwidth]{figs/syntoxprofiler.jpg}
-
-    \hspace*{15pt}\hbox{\scriptsize Credit:\thinspace{\scriptsize\itshape Ianevski et. al., 2020}}
-\end{frame}
-
-
-\begin{frame}{SynToxProfiler Methods}
-    Calculate (normalized) volume under 
-    \begin{itemize}
-        \item $E_{AB}$: Efficacy curve (cancer tissue)
-        \item $T_{AB}$: Toxicity curve (healthy tissue)
-        \item $S_{AB}$: Synergy curve (cancer tissue)
-    \end{itemize}
-    \vfill
-    For each combination, calculate and rank by STE score 
-    \[
-        {\rm STE}_{AB} = \frac{{\rm rank}(S_{AB}) + {\rm rank}(E_{AB} - T_{AB})}{2N}
-    \]
-
-    \only<2>{
-        What if we replace with:
-        \[
-            {\rm STE}_{AB, \alert{\alpha}} = \frac{\alert{\alpha} {\rm rank}(S_{AB}) + (1 - \alert{\alpha}){\rm rank}(E_{AB} - T_{AB})}{N},
-        \]
-        for some $\alpha\in [0,1]$?
-    }
-\end{frame}
-
-
-\begin{frame}[allowframebreaks]
-    \frametitle{References}
-    \bibliographystyle{amsalpha}
-    \bibliography{main.bib}
-    \nocite{CHENG2021111652}
-    \nocite{CHOU1976253}
-    \nocite{Ianevski2020-sv}
-    \nocite{drugcombdb}
-    \nocite{synergyfinder}
-\end{frame}
-
-\section{Supplementary}
-
-
-\subsection{Monotherapeutic Dose-Response Curves}
-
-\begin{frame}{Median-Effect Equation}
-
-    \begin{definition}[Median-Effect Equation (MEE)]
-        \[
-            \log\frac{f_a}{1 - f_a} = n\log D - n \log D_m,
-        \]
-        where
-        \begin{itemize}
-            \item $f_a$ is the \textit{fraction effected} of a receptor
-            \item $D$ is the dose of ligand
-            \item $D_m$ is the \textit{median effect dose}
-            \item $n$ is the \textit{Hill coefficient}
-        \end{itemize}
-    \end{definition}
-
-    \begin{itemize}
-        \item Governs how concentration of ligand influences the proportion of receptors effected
-        \item Derived by Ting-Chao Chou in 1976 from the mass effect law
-        \item Provides a nice justification for linear models
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Atovaquone/Brusatol MEE Curves}
-    Define \[
-        Survival_{ijk} = OD_{ijk} / \max_{i'}\{OD_{i'jk}\}
-    \]
-    for the $i$th well in the $j$th plate and $k$th set.
-    \begin{figure}
-        \centering
-        \begin{subfigure}{0.5\textwidth}
-            \centering
-            \includegraphics[width=0.9\textwidth]{figs/ato-survival.png}
-        \end{subfigure}%
-        \begin{subfigure}{0.5\textwidth}
-            \centering
-            \includegraphics[width=0.9\textwidth]{figs/bru-survival.png}
-        \end{subfigure}
-    \end{figure}
-\end{frame}
-
-\begin{frame}{4 Parameter Logistic Regression}
-    \begin{Definition}[4 Parameter Logistic (4PL) Curve]
-        \[
-            f(D) = \eta_0 + \frac{\eta_f - \eta_0}{1 + \left(\frac{D}{D_m}\right)^{-n}},
-        \]
-        where \begin{itemize}
-            \item $\eta_0$ is the \textit{minimal effect}
-            \item $\eta_f$ is the \textit{maximal effect}
-        \end{itemize}
-    \end{Definition}
-    \vfill
-    \begin{itemize}
-        \item Generalizes the Hill equation 
-        \item Enables minimal and maximal effects 
-        \item No longer has a nice linear form 
-        \item Still asserts monotonicity
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Atovaquone/Brusatol 4PL Curves}
-    \begin{figure}
-        \centering
-        \begin{subfigure}{0.5\textwidth}
-            \centering
-            \includegraphics[width=0.9\textwidth, height = 0.6\textheight]{figs/ato4pl.png}
-        \end{subfigure}%
-        \begin{subfigure}{0.5\textwidth}
-            \centering
-            \includegraphics[width=0.9\textwidth, height = 0.6\textheight]{figs/bru4pl.png}
-        \end{subfigure}
-    \end{figure}
-\end{frame}
-
 \begin{frame}{Constant Ratio Dose-Response Curves}
     \begin{figure}[b]
         \centering

@@ -26,92 +26,115 @@
 \headcommand {\beamer@framepages {16}{16}}
 \headcommand {\slideentry {2}{0}{2}{17/17}{}{0}}
 \headcommand {\beamer@framepages {17}{17}}
-\headcommand {\slideentry {2}{0}{3}{18/18}{}{0}}
-\headcommand {\beamer@framepages {18}{18}}
-\headcommand {\slideentry {2}{0}{4}{19/20}{}{0}}
-\headcommand {\beamer@framepages {19}{20}}
-\headcommand {\slideentry {2}{0}{5}{21/21}{}{0}}
+\headcommand {\slideentry {2}{0}{3}{18/20}{}{0}}
+\headcommand {\beamer@framepages {18}{20}}
+\headcommand {\slideentry {2}{0}{4}{21/21}{}{0}}
 \headcommand {\beamer@framepages {21}{21}}
-\headcommand {\slideentry {2}{0}{6}{22/24}{}{0}}
-\headcommand {\beamer@framepages {22}{24}}
-\headcommand {\slideentry {2}{0}{7}{25/25}{}{0}}
+\headcommand {\beamer@sectionpages {16}{21}}
+\headcommand {\beamer@subsectionpages {16}{21}}
+\headcommand {\sectionentry {3}{Efficacy and Toxicity}{22}{Efficacy and Toxicity}{0}}
+\headcommand {\slideentry {3}{0}{1}{22/22}{}{0}}
+\headcommand {\beamer@framepages {22}{22}}
+\headcommand {\slideentry {3}{0}{2}{23/24}{}{0}}
+\headcommand {\beamer@framepages {23}{24}}
+\headcommand {\slideentry {3}{0}{3}{25/25}{}{0}}
 \headcommand {\beamer@framepages {25}{25}}
-\headcommand {\slideentry {2}{0}{8}{26/26}{}{0}}
-\headcommand {\beamer@framepages {26}{26}}
-\headcommand {\slideentry {2}{0}{9}{27/28}{}{0}}
-\headcommand {\beamer@framepages {27}{28}}
-\headcommand {\slideentry {2}{0}{10}{29/29}{}{0}}
-\headcommand {\beamer@framepages {29}{29}}
-\headcommand {\slideentry {2}{0}{11}{30/30}{}{0}}
-\headcommand {\beamer@framepages {30}{30}}
-\headcommand {\slideentry {2}{0}{12}{31/32}{}{0}}
-\headcommand {\beamer@framepages {31}{32}}
-\headcommand {\slideentry {2}{0}{13}{33/33}{}{0}}
+\headcommand {\slideentry {3}{0}{4}{26/29}{}{0}}
+\headcommand {\beamer@framepages {26}{29}}
+\headcommand {\slideentry {3}{0}{5}{30/31}{}{0}}
+\headcommand {\beamer@framepages {30}{31}}
+\headcommand {\slideentry {3}{0}{6}{32/32}{}{0}}
+\headcommand {\beamer@framepages {32}{32}}
+\headcommand {\slideentry {3}{0}{7}{33/33}{}{0}}
 \headcommand {\beamer@framepages {33}{33}}
-\headcommand {\slideentry {2}{0}{14}{34/34}{}{0}}
+\headcommand {\slideentry {3}{0}{8}{34/34}{}{0}}
 \headcommand {\beamer@framepages {34}{34}}
-\headcommand {\slideentry {2}{0}{15}{35/35}{}{0}}
+\headcommand {\slideentry {3}{0}{9}{35/35}{}{0}}
 \headcommand {\beamer@framepages {35}{35}}
-\headcommand {\slideentry {2}{0}{16}{36/36}{}{0}}
+\headcommand {\beamer@sectionpages {22}{35}}
+\headcommand {\beamer@subsectionpages {22}{35}}
+\headcommand {\sectionentry {4}{Proposed Research Topics}{36}{Proposed Research Topics}{0}}
+\headcommand {\slideentry {4}{0}{1}{36/36}{}{0}}
 \headcommand {\beamer@framepages {36}{36}}
-\headcommand {\slideentry {2}{0}{17}{37/37}{}{0}}
+\headcommand {\beamer@subsectionpages {36}{36}}
+\headcommand {\beamer@subsectionentry {0}{4}{1}{37}{Synergy Score Aggregation}}
+\headcommand {\slideentry {4}{1}{1}{37/37}{Synergy Score Aggregation}{0}}
 \headcommand {\beamer@framepages {37}{37}}
-\headcommand {\slideentry {2}{0}{18}{38/38}{}{0}}
+\headcommand {\slideentry {4}{1}{2}{38/38}{Synergy Score Aggregation}{0}}
 \headcommand {\beamer@framepages {38}{38}}
-\headcommand {\slideentry {2}{0}{19}{39/39}{}{0}}
+\headcommand {\slideentry {4}{1}{3}{39/39}{Synergy Score Aggregation}{0}}
 \headcommand {\beamer@framepages {39}{39}}
-\headcommand {\slideentry {2}{0}{20}{40/40}{}{0}}
+\headcommand {\beamer@subsectionpages {37}{39}}
+\headcommand {\beamer@subsectionentry {0}{4}{2}{40}{Network-Based Synergy}}
+\headcommand {\slideentry {4}{2}{1}{40/40}{Network-Based Synergy}{0}}
 \headcommand {\beamer@framepages {40}{40}}
-\headcommand {\slideentry {2}{0}{21}{41/44}{}{0}}
-\headcommand {\beamer@framepages {41}{44}}
-\headcommand {\slideentry {2}{0}{22}{45/46}{}{0}}
-\headcommand {\beamer@framepages {45}{46}}
-\headcommand {\slideentry {2}{0}{23}{47/47}{}{0}}
+\headcommand {\slideentry {4}{2}{2}{41/41}{Network-Based Synergy}{0}}
+\headcommand {\beamer@framepages {41}{41}}
+\headcommand {\beamer@subsectionpages {40}{41}}
+\headcommand {\beamer@subsectionentry {0}{4}{3}{42}{Non-monotonic Dose-Response Curves}}
+\headcommand {\slideentry {4}{3}{1}{42/42}{Non-monotonic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {42}{42}}
+\headcommand {\slideentry {4}{3}{2}{43/43}{Non-monotonic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {43}{43}}
+\headcommand {\slideentry {4}{3}{2}{43/44}{Non-monotonic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {43}{44}}
+\headcommand {\beamer@sectionpages {36}{44}}
+\headcommand {\beamer@subsectionpages {42}{44}}
+\headcommand {\sectionentry {5}{Supplementary}{45}{Supplementary}{0}}
+\headcommand {\slideentry {5}{0}{1}{45/45}{}{0}}
+\headcommand {\beamer@framepages {45}{45}}
+\headcommand {\beamer@subsectionpages {45}{45}}
+\headcommand {\beamer@subsectionentry {0}{5}{1}{46}{Monotherapeutic Dose-Response Curves}}
+\headcommand {\slideentry {5}{1}{1}{46/46}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {46}{46}}
+\headcommand {\slideentry {5}{1}{2}{47/47}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {47}{47}}
-\headcommand {\beamer@sectionpages {16}{47}}
-\headcommand {\beamer@subsectionpages {16}{47}}
-\headcommand {\sectionentry {3}{Efficacy and Toxicity}{48}{Efficacy and Toxicity}{0}}
-\headcommand {\slideentry {3}{0}{1}{48/48}{}{0}}
+\headcommand {\slideentry {5}{1}{3}{48/48}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {48}{48}}
-\headcommand {\slideentry {3}{0}{2}{49/50}{}{0}}
-\headcommand {\beamer@framepages {49}{50}}
-\headcommand {\slideentry {3}{0}{3}{51/51}{}{0}}
-\headcommand {\beamer@framepages {51}{51}}
-\headcommand {\slideentry {3}{0}{4}{52/55}{}{0}}
-\headcommand {\beamer@framepages {52}{55}}
-\headcommand {\slideentry {3}{0}{5}{56/57}{}{0}}
-\headcommand {\beamer@framepages {56}{57}}
-\headcommand {\slideentry {3}{0}{6}{58/58}{}{0}}
+\headcommand {\slideentry {5}{1}{4}{49/49}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {49}{49}}
+\headcommand {\slideentry {5}{1}{5}{50/50}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {50}{50}}
+\headcommand {\slideentry {5}{1}{6}{51/52}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {51}{52}}
+\headcommand {\slideentry {5}{1}{7}{53/53}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {53}{53}}
+\headcommand {\slideentry {5}{1}{8}{54/56}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {54}{56}}
+\headcommand {\slideentry {5}{1}{9}{57/57}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {57}{57}}
+\headcommand {\slideentry {5}{1}{10}{58/58}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {58}{58}}
-\headcommand {\slideentry {3}{0}{7}{59/59}{}{0}}
-\headcommand {\beamer@framepages {59}{59}}
-\headcommand {\slideentry {3}{0}{8}{60/61}{}{0}}
-\headcommand {\beamer@framepages {60}{61}}
-\headcommand {\slideentry {3}{0}{9}{62/62}{}{0}}
+\headcommand {\slideentry {5}{1}{11}{59/60}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {59}{60}}
+\headcommand {\slideentry {5}{1}{12}{61/61}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {61}{61}}
+\headcommand {\slideentry {5}{1}{13}{62/62}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {62}{62}}
-\headcommand {\slideentry {3}{0}{9}{62/63}{}{0}}
-\headcommand {\beamer@framepages {62}{63}}
-\headcommand {\beamer@sectionpages {48}{63}}
-\headcommand {\beamer@subsectionpages {48}{63}}
-\headcommand {\sectionentry {4}{Supplementary}{64}{Supplementary}{0}}
-\headcommand {\slideentry {4}{0}{1}{64/64}{}{0}}
-\headcommand {\beamer@framepages {64}{64}}
-\headcommand {\beamer@subsectionpages {64}{64}}
-\headcommand {\beamer@subsectionentry {0}{4}{1}{65}{Monotherapeutic Dose-Response Curves}}
-\headcommand {\slideentry {4}{1}{1}{65/65}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\slideentry {5}{1}{14}{63/64}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {63}{64}}
+\headcommand {\slideentry {5}{1}{15}{65/65}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {65}{65}}
-\headcommand {\slideentry {4}{1}{2}{66/66}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\slideentry {5}{1}{16}{66/66}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {66}{66}}
-\headcommand {\slideentry {4}{1}{3}{67/67}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\slideentry {5}{1}{17}{67/67}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {67}{67}}
-\headcommand {\slideentry {4}{1}{4}{68/68}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\slideentry {5}{1}{18}{68/68}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {68}{68}}
-\headcommand {\slideentry {4}{1}{5}{69/69}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\slideentry {5}{1}{19}{69/69}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {69}{69}}
-\headcommand {\slideentry {4}{1}{6}{70/70}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\slideentry {5}{1}{20}{70/70}{Monotherapeutic Dose-Response Curves}{0}}
 \headcommand {\beamer@framepages {70}{70}}
-\headcommand {\beamer@partpages {1}{70}}
-\headcommand {\beamer@subsectionpages {65}{70}}
-\headcommand {\beamer@sectionpages {64}{70}}
-\headcommand {\beamer@documentpages {70}}
-\headcommand {\gdef \inserttotalframenumber {49}}
+\headcommand {\slideentry {5}{1}{21}{71/71}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {71}{71}}
+\headcommand {\slideentry {5}{1}{22}{72/72}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {72}{72}}
+\headcommand {\slideentry {5}{1}{23}{73/73}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {73}{73}}
+\headcommand {\slideentry {5}{1}{24}{74/74}{Monotherapeutic Dose-Response Curves}{0}}
+\headcommand {\beamer@framepages {74}{74}}
+\headcommand {\beamer@partpages {1}{74}}
+\headcommand {\beamer@subsectionpages {46}{74}}
+\headcommand {\beamer@sectionpages {45}{74}}
+\headcommand {\beamer@documentpages {74}}
+\headcommand {\gdef \inserttotalframenumber {56}}
