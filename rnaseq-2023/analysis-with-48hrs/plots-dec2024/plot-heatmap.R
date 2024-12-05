@@ -3,13 +3,9 @@
 library(dplyr)
 library(rlang)
 library(purrr)
-library(tidyverse)
-library(pheatmap)
-library(colourpicker)
 library(bslib)
 library(ggplot2)
 library(colorspace)
-library(pathfindR)
 
 
 p_vals_to_stars <- Vectorize(function(p) {
@@ -87,7 +83,7 @@ expression_heatmap <- function(
   nsets <- length(gene_sets)
   if (is.null(df)) return("Please select at least one gene")
   df_wide <- df %>%
-    pivot_wider(
+    tidyr::pivot_wider(
       id_cols = colnames(df)[c(1,5:ncol(df))],
       names_from = c("treatment", "time"),
       values_from = "log2FoldChange"

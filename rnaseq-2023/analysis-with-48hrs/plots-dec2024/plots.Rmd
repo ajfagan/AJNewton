@@ -22,15 +22,15 @@ alpha = 0.01
 n = 10
 library(DESeq2)
 library(dplyr)
-library(rlang)
-library(purrr)
-library(tidyverse)
+#library(rlang)
+#library(purrr)
+# library(tidyverse)
 library(pheatmap)
-library(colourpicker)
+#library(colourpicker)
 library(bslib)
 library(ggplot2)
 library(colorspace)
-library(pathfindR)
+# library(pathfindR)
 library(org.Hs.eg.db)
 library(RColorBrewer)
 ```
@@ -355,7 +355,7 @@ de.time <- de.time[complete.cases(de.time),]
 
 de.time <- de.time %>%
   tibble::rownames_to_column(var = "Gene") %>%
-  pivot_longer(cols = 2:9) %>%
+  tidyr::pivot_longer(cols = 2:9) %>%
   mutate(treatment = as.numeric(substr(name, 3, 4))) %>%
   mutate(time = as.numeric(substr(name, 8, 9))) %>%
   dplyr::select(-name) %>%
@@ -383,7 +383,7 @@ genesets <- list(
       "GADD45A",
       "TXNIP"
     ),
-    "DNA repair" = c(
+    "DNA Repair" = c(
       "UNC5B",
       "DDIT4",
       "RBBP8",
@@ -402,7 +402,7 @@ genesets <- list(
     "Spliceosome" = c(
       "DDX23",
       "DDX24",
-      "DDX3X" # DDX3X3
+      "DDX3X"
     ),
     "Proteasome" = c(
       "PSMC2",
@@ -441,7 +441,7 @@ genesets <- list(
     )
   ),
   "Folate cycle" = list(
-    "Folate cycle" = c("ALDH1L2", "MTHFD2", "MTHFDL1L", "SHMT2", "DHFR")
+    "Folate cycle" = c("ALDH1L2", "MTHFD2", "MTHFD1L", "SHMT2", "DHFR")
   ),
   "Glutathione synthesis" = list(
     "Glutathione synthesis" = c(
@@ -458,9 +458,9 @@ genesets <- list(
       "HSPA1L",
       'HSPA8',
       'DNAJA1',
-      'HSPA90AA1',
-      'HSPA90AB1',
-      'HSPA90B1',
+      'HSP90AA1',
+      'HSP90AB1',
+      'HSP90B1',
       'HSPH1'
     ),
     "Protein processing machinery" = c(
@@ -502,7 +502,7 @@ genesets <- list(
     'CHOP-regulated genes' = c(
       'TRIB3',
       'TNFRSF10B',
-      'GADD34',
+      'PPP1R15A',
       'KLHDC7B',
       'BBC3',
       'PMAIP1',
@@ -548,8 +548,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Oxidative stress"]], x_offset = 2.7) +
-  scale_x_continuous(limits = c(-5, 4))
+expression_barplot(
+  de.time, 
+  genesets[["Oxidative stress"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-4, 4)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -574,8 +588,24 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Cell cycle"]]) +
-  scale_x_continuous(limits = c(-2.05, 0.5))
+expression_barplot(
+  de.time, 
+  genesets[["Cell cycle"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-2.05, 0.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
+# expression_barplot(de.time, genesets[["Cell cycle"]]) +
+  # scale_x_continuous(limits = c(-2.05, 0.5))
 ```
 
 
@@ -599,7 +629,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["RNA and protein processing"]])
+expression_barplot(
+  de.time, 
+  genesets[["RNA and protein processing"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-2.05, 0.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -622,7 +667,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Glycolysis and pentose phosphate pathway"]])
+expression_barplot(
+  de.time, 
+  genesets[["Glycolysis and pentose phosphate pathway"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -646,7 +706,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Folate cycle"]])
+expression_barplot(
+  de.time, 
+  genesets[["Folate cycle"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-2.5, 2.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -669,7 +744,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Glutathione synthesis"]])
+expression_barplot(
+  de.time, 
+  genesets[["Glutathione synthesis"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-2.5, 2.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -691,8 +781,23 @@ expression_heatmap(de.time, genesets[["Protein processing in ER"]])
 And then a barplot.
 
 
-```{r}
-expression_barplot(de.time, genesets[["Protein processing in ER"]])
+```{r, fig.height = 20, fig.width=20}
+expression_barplot(
+  de.time, 
+  genesets[["Protein processing in ER"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-3.5, 3.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -715,7 +820,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["CHOP-regulated genes"]])
+expression_barplot(
+  de.time, 
+  genesets[["CHOP-regulated genes"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-6, 6)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -738,7 +858,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Natural killer cell ligands"]])
+expression_barplot(
+  de.time, 
+  genesets[["Natural killer cell ligands"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-3, 3)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 
@@ -761,7 +896,22 @@ And then a barplot.
 
 
 ```{r}
-expression_barplot(de.time, genesets[["Immune-related genes"]])
+expression_barplot(
+  de.time, 
+  genesets[["Immune-related genes"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8
+) +
+  scale_x_continuous(limits = c(-3, 3)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank()#,
+    #panel.grid.minor = element_blank()
+  )
 ```
 
 

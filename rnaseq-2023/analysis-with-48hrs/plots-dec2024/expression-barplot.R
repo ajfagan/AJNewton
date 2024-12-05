@@ -3,13 +3,10 @@
 library(dplyr)
 library(rlang)
 library(purrr)
-library(tidyverse)
 library(pheatmap)
-library(colourpicker)
 library(bslib)
 library(ggplot2)
 library(colorspace)
-library(pathfindR)
 
 build_df <- function(
     df,
@@ -66,13 +63,13 @@ p_vals_to_annotations <- Vectorize(function(p) {
 expression_barplot <- function(
     df, genesets,
     
-    time_label = "Time (hrs)",
+    time_label = "Time (Hours)",
     time_color_palette = "Lajolla",
     plot_title = "Barplot of estimated effect sizes for Atovaquone vs DMSO",
     pval_to_star = F,
     pval_annotation = T,
-    x_offset = 0.5
-    
+    x_offset = 0.5,
+    ...
 ) { 
   #print(head(de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n])))
   #print(length(unique((de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n]))$gene)))
@@ -96,13 +93,16 @@ expression_barplot <- function(
       group = group
     )
   ) +
-    geom_col(position= position) + 
-    facet_grid(group ~ as.factor(treatment), scales = "free_y") +
+    geom_col(position= position, ...) + 
+    facet_grid(
+      group ~ as.factor(treatment), 
+      scales = "free_y", 
+      labeller = labeller(groupwrap = label_wrap_gen(10))) +
     xlab("log2-Fold Change") +
     ylab("Gene") + 
     theme_bw() +
     labs(title = plot_title, fill = time_label) +
-    scale_fill_discrete_sequential(palette = time_color_palette) 
+    scale_fill_discrete_sequential(palette = time_color_palette)  
   
   if (pval_annotation) {
     pp <- pp +
