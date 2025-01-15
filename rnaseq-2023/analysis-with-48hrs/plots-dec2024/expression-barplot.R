@@ -1,12 +1,18 @@
 
 
-library(dplyr)
+library(dplyr) 
 library(rlang)
 library(purrr)
 library(pheatmap)
 library(bslib)
 library(ggplot2)
 library(colorspace)
+library(stringr)
+
+str_wrap_factor <- function(x, var_width) {
+  levels(x) <- str_wrap(levels(x), var_width)
+  x
+}
 
 build_df <- function(
     df,
@@ -14,6 +20,7 @@ build_df <- function(
     treatments = c(45, 30),
     times = c(8, 24, 48)
 ) {
+  geneset_names <- factor(names(genesets), ordered = T)
   nsets <- length(genesets)
   genes <- c()
   for (i in 1:nsets) {
@@ -41,6 +48,7 @@ build_df <- function(
     }
   }
   
+  df$group <- factor(df$group, levels = geneset_names)
   df
 }
 
@@ -64,11 +72,19 @@ expression_barplot <- function(
     df, genesets,
     
     time_label = "Time (Hours)",
-    time_color_palette = "Lajolla",
+    time_color_palette = F,#"Lajolla",
+    colors = c(
+      '#285291',
+      '#91188E',
+      '#539027'
+    ),
     plot_title = "Barplot of estimated effect sizes for Atovaquone vs DMSO",
     pval_to_star = F,
     pval_annotation = T,
     x_offset = 0.5,
+    var_width = 60,
+    geneset_fontsize = 14,
+    wrap_param = 10,
     ...
 ) { 
   #print(head(de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n])))
@@ -77,6 +93,7 @@ expression_barplot <- function(
   #print(head(de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n]) %>% filter(gene %in% genes)))
   df <- build_df(df, genesets) %>%
     mutate(treatment = paste(treatment, "μM", sep = ""))
+  names(colors) <- unique(df$time)
   
   if (pval_to_star) {
     df$Gene <- paste( p_vals_to_stars(df$p.adj), df$Gene)
@@ -89,20 +106,26 @@ expression_barplot <- function(
     aes(
       y = Gene,
       x = log2FoldChange,
-      fill = as.factor(time),
-      group = group
+      fill = factor(time),
+      group = factor(group, labels = str_wrap(levels(group), var_width), levels = names(genesets))
     )
   ) +
     geom_col(position= position, ...) + 
+    geom_vline(aes(xintercept=0.0), size=1) +
     facet_grid(
-      group ~ as.factor(treatment), 
+      str_wrap_factor(group, var_width) ~ factor(treatment, ordered=T), 
       scales = "free_y", 
-      labeller = labeller(groupwrap = label_wrap_gen(10))) +
+      space = 'free',
+      labeller = labeller(groupwrap = label_wrap_gen(wrap_param))) +
     xlab("log2-Fold Change") +
     ylab("Gene") + 
     theme_bw() +
+    theme(
+      strip.text.y = element_text(face="bold", size=geneset_fontsize)
+    ) +
     labs(title = plot_title, fill = time_label) +
-    scale_fill_discrete_sequential(palette = time_color_palette)  
+    scale_fill_manual(values = colors)
+    #scale_fill_discrete_sequential(palette = time_color_palette) 
   
   if (pval_annotation) {
     pp <- pp +
