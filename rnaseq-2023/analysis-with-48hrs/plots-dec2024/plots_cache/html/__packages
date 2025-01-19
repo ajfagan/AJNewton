@@ -18,3 +18,8 @@ org.Hs.eg.db
 RColorBrewer
 rlang
 purrr
+pathfindR.data
+pathfindR
+stringr
+ggVennDiagram
+gridExtra

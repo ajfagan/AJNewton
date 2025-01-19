@@ -42,6 +42,7 @@ library(colorspace)
 library(pathfindR)
 library(org.Hs.eg.db)
 library(RColorBrewer)
+library(ggVennDiagram)
 ```
 
 
@@ -409,6 +410,12 @@ genesets <- list(
     )
   ),
   "RNA and Protein Processing" = list(
+    "Mitotic Checkpoint" = c(
+      "BUB1", "BUB1B", "BUB3"
+    ),
+    "DNA Replication Initiation" = c(
+      "MCM10", "MCM4"
+    ),
     "Spliceosome" = c(
       "DDX23",
       "DDX24",
@@ -716,8 +723,9 @@ And then a barplot.
 
 
 
-```{r, fig.height=20, fig.width=20}
+```{r, fig.height=30, fig.width=30}
 text_size=25
+2+2
 expression_barplot(
   de.time, 
   genesets[["RNA and Protein Processing"]], 
@@ -725,7 +733,7 @@ expression_barplot(
   time_color_palette = "Viridis",
   pval_annotation = T,
   width = 0.8,
-  var_width = 20
+  var_width = 10
 ) +
   scale_x_continuous(limits = c(-2.05, 0.5)) +
   ggtitle("") + 
@@ -734,13 +742,13 @@ expression_barplot(
     axis.line = element_line(color = 'black'),
     panel.grid.major = element_blank(),
     strip.text.y = element_text(face = "bold", size=text_size),
-    strip.text.x = element_text(size = text_size),
+    strip.text.x = element_text(size = text_size + 5),
     axis.text.x = element_text(size=text_size),
     axis.text.y = element_text(face = "bold", size=text_size),
-    axis.title.y = element_text(size=text_size),
-    axis.title.x = element_text(size=text_size),
-    legend.text = element_text(size = text_size),
-    legend.title = element_text(size = text_size)#,
+    axis.title.y = element_text(size=text_size + 10),
+    axis.title.x = element_text(size=text_size + 10),
+    legend.text = element_text(size = text_size + 15),
+    legend.title = element_text(size = text_size + 15)#,
     #panel.grid.minor = element_blank()
   )  
   
@@ -1379,7 +1387,13 @@ expression_barplot(
 
 ```{r, fig.height=8, fig.width=16}
 text_size = 23
-kegg.df <- read.csv("pathfindR-active-sets.csv")
+kegg.df <- read.csv("../results/pathfindR-active-sets.csv")
+# kegg.df <- run_pathfindR(
+#   res %>%
+#     mutate(gene = rownames(.)) %>%
+#     dplyr::select(gene, log2FoldChange, padj) %>%
+#     mutate(padj = ifelse(is.na(padj), 1, padj))
+# )
 kegg_sets <- c(
               "Proteasome", 
               "Spliceosome",
@@ -1485,30 +1499,30 @@ input_processed <- input_processing(
 #     dplyr::select(gene, log2FoldChange, padj) %>%
 #     mutate(padj = ifelse(is.na(padj), 1, padj))
 # )
-gg_list <- visualize_terms(kegg.df[10:11,], input_processed, is_KEGG_result = T)
+#gg_list <- visualize_terms(kegg.df[10:11,], input_processed, is_KEGG_result = T)
 
 kegg.df
 ```
 
 ```{r}
-gg_list[[1]] + 
-  scale_fill_gradient2(low = "red", mid = "gray", high = "green", lim = c(-1, 1))
+#gg_list[[1]] + 
+#  scale_fill_gradient2(low = "red", mid = "gray", high = "green", lim = c(-1, #1))
 ```
 
 
 
 
 ```{r}
-gg_list[[2]] + scale_fill_gradient2(low = "red", mid = "gray", high = "green", lim = c(-1, 1))
+#gg_list[[2]] + scale_fill_gradient2(low = "red", mid = "gray", high = "green", lim = c(-1, 1))
 ```
 
 ```{r, evaluate=F, include=F}
-for (g in names(gg_list)) {
-  ggplot2::ggsave(
-    paste("results/pathfindR-vis/", g, ".pdf", sep = ""),
-    gg_list[[g]]+ scale_fill_gradient2(low = "red", mid = "gray", high = "green", lim = c(-1, 1))
-  )
-}
+#for (g in names(gg_list)) {
+#  ggplot2::ggsave(
+#    paste("results/pathfindR-vis/", g, ".pdf", sep = ""),
+#    gg_list[[g]]+ scale_fill_gradient2(low = "red", mid = "gray", high = "green", lim = c(-1, 1))
+#  )
+#}
 ```
 
 
@@ -1758,8 +1772,176 @@ to_plot %>%
 
 
 
+## Protein Processing in ER + CHOP
 
 
+```{r, fig.height=40, fig.width = 20}
+require(gridExtra)
+text_size = 30
+pER <- expression_barplot(
+  de.time, 
+  c(
+    genesets[["Protein Processing in ER - 1"]], 
+    genesets[["Protein Processing in ER - 2"]]
+  ),
+  x_offset = 1.5,
+  time_color_palette = "Viridis",
+  pval_annotation = T,
+  width = 0.8,
+  var_width = 10
+) +
+  scale_x_continuous(limits = c(-3.5, 3.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank(),
+    strip.text.y = element_text(face = "bold", size=text_size),
+    strip.text.x = element_text(size = text_size),
+    axis.text.x = element_text(size=text_size),
+    axis.text.y = element_text(face = "bold", size=text_size),
+    axis.title.y = element_text(size=text_size),
+    axis.title.x = element_text(size=text_size),
+    legend.text = element_text(size = text_size),
+    legend.title = element_text(size = text_size)#,
+    #panel.grid.minor = element_blank()
+  )
+
+pChop <- expression_barplot(
+  de.time, 
+  genesets[["CHOP-regulated Genes"]], 
+  x_offset = 4,
+  time_color_palette = "Viridis",
+  pval_annotation = T,
+  width = 0.8,
+  var_width = 20
+) +
+  scale_x_continuous(limits = c(-6, 6)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank(),
+    strip.text.y = element_text(face = "bold", size=text_size),
+    strip.text.x = element_text(size = text_size),
+    axis.text.x = element_text(size=text_size),
+    axis.text.y = element_text(face = "bold", size=text_size),
+    axis.title.y = element_text(size=text_size),
+    axis.title.x = element_text(size=text_size),
+    legend.text = element_text(size = text_size),
+    legend.title = element_text(size = text_size)#,
+    #panel.grid.minor = element_blank()
+  )
+grid.arrange(pER, pChop, heights = c(32, 7))
+```
+
+
+
+
+```{r, fig.height=40, fig.width = 20}
+require(gridExtra)
+text_size = 30
+pER <- expression_barplot(
+  de.time, 
+  c(
+    genesets[["Protein Processing in ER - 1"]], 
+    genesets[["Protein Processing in ER - 2"]]
+  ),
+  x_offset = 1.5,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8,
+  var_width = 10
+) +
+  scale_x_continuous(limits = c(-3.5, 3.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank(),
+    strip.text.y = element_text(face = "bold", size=text_size),
+    strip.text.x = element_text(size = text_size),
+    axis.text.x = element_text(size=text_size),
+    axis.text.y = element_text(face = "bold", size=text_size),
+    axis.title.y = element_text(size=text_size),
+    axis.title.x = element_text(size=text_size),
+    legend.text = element_text(size = text_size),
+    legend.title = element_text(size = text_size)#,
+    #panel.grid.minor = element_blank()
+  )
+
+pChop <- expression_barplot(
+  de.time, 
+  genesets[["CHOP-regulated Genes"]], 
+  x_offset = 4,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8,
+  var_width = 20
+) +
+  scale_x_continuous(limits = c(-6, 6)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank(),
+    strip.text.y = element_text(face = "bold", size=text_size),
+    strip.text.x = element_text(size = text_size),
+    axis.text.x = element_text(size=text_size),
+    axis.text.y = element_text(face = "bold", size=text_size),
+    axis.title.y = element_text(size=text_size),
+    axis.title.x = element_text(size=text_size),
+    legend.text = element_text(size = text_size),
+    legend.title = element_text(size = text_size)#,
+    #panel.grid.minor = element_blank()
+  )
+grid.arrange(pER, pChop, heights = c(32, 7))
+```
+
+
+```{r, fig.height=30, fig.width=30}
+text_size=25
+pBar <- expression_barplot(
+  de.time, 
+  genesets[["RNA and Protein Processing"]], 
+  x_offset = 2.7,
+  time_color_palette = "Viridis",
+  pval_annotation = F,
+  width = 0.8,
+  var_width = 25
+) +
+  scale_x_continuous(limits = c(-2.05, 0.5)) +
+  ggtitle("") + 
+  theme_bw() + 
+  theme(
+    axis.line = element_line(color = 'black'),
+    panel.grid.major = element_blank(),
+    strip.text.y = element_text(face = "bold", size=text_size),
+    strip.text.x = element_text(size = text_size),
+    axis.text.x = element_text(size=text_size),
+    axis.text.y = element_text(face = "bold", size=text_size),
+    axis.title.y = element_text(size=text_size),
+    axis.title.x = element_text(size=text_size),
+    legend.text = element_text(size = text_size),
+    legend.title = element_text(size = text_size)#,
+    #panel.grid.minor = element_blank()
+  )  
+pBub <- enrichment_chart(
+  kegg.df,
+  top_terms = length(kegg_sets),
+  plot_by_cluster = T
+) + 
+  scale_color_gradient(low = "#f59f9f", high = "red") +
+  theme(
+    strip.text.y = element_text(face="bold", size=text_size),
+    axis.text.y = element_text(face = "bold", size=text_size),
+    legend.text = element_text(size=text_size),
+    legend.title = element_text(size=text_size),
+    axis.text.x = element_text(size = text_size),
+    axis.title.x = element_text(size=text_size, face="bold")
+  )
+grid.arrange(pBar, pBub, heights = c(10, 5), widths = c(1, 1.5))
+```
 
 
 
