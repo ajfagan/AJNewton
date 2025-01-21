@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=shinyShortcut
+Comment=Run Shiny App
+Exec=/mnt/hdd/AJNewton/rnaseq-2023/Atovaquone-Gene-Explorer/.shiny_run/shinyShortcut.r
+Terminal=false
+Type=Application

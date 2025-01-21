@@ -13,8 +13,11 @@ pheatmap
 bslib
 ggplot2
 colorspace
+pathfindR.data
+pathfindR
 AnnotationDbi
 org.Hs.eg.db
 RColorBrewer
 rlang
 purrr
+stringr

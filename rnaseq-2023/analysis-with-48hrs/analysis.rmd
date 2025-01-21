@@ -111,6 +111,13 @@ The plot shows that batches a, b/c, and d have huge differences between them, wh
 In particular, batch a seems much further than the others, while batch d seems fairly close to b/c.
 Batch d contains only samples after 48 hours, so differences between it and b/c are unsurprising.
 
+```{r}
+cts
+boxplot(log2(1 + cts))
+plot(hclust(dist(t(log2(1+cts)))))
+```
+
+
 ```{r hierarchical-clustering, echo=FALSE, warning=FALSE, message=FALSE}
 ntd <- normTransform(dds)
 sampleDists <- dist(t(assay(ntd)))
