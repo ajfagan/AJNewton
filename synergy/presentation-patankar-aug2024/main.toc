@@ -1,9 +1,0 @@
-\beamer@sectionintoc {1}{Introduction}{2}{0}{1}
-\beamer@sectionintoc {2}{Modeling Synergy}{16}{0}{2}
-\beamer@sectionintoc {3}{Efficacy and Toxicity}{22}{0}{3}
-\beamer@sectionintoc {4}{Proposed Research Topics}{36}{0}{4}
-\beamer@subsectionintoc {4}{1}{Synergy Score Aggregation}{37}{0}{4}
-\beamer@subsectionintoc {4}{2}{Network-Based Synergy}{40}{0}{4}
-\beamer@subsectionintoc {4}{3}{Non-monotonic Dose-Response Curves}{42}{0}{4}
-\beamer@sectionintoc {5}{Supplementary}{45}{0}{5}
-\beamer@subsectionintoc {5}{1}{Monotherapeutic Dose-Response Curves}{46}{0}{5}
