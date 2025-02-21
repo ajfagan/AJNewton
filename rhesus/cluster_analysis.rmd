@@ -1,0 +1,96 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(allez)
+library(org.Hs.eg.db)
+library(ggplot2)
+
+df <- read.csv("/mnt/hdd/rhesus/Mky-194-10/outs-fixed/analysis/diffexp/gene_expression_graphclust/differential_expression.csv")
+df
+
+allez.dat <- df$Cluster.2.Adjusted.p.value < 0.1
+names(allez.dat) <- df$Feature.Name
+mean(allez.dat)
+sum(allez.dat)
+
+length(unique(names(allez.dat)))
+names(allez.dat)[duplicated(names(allez.dat))]
+which(names(allez.dat) == "HSPA14")
+df[c(7264, 7265),]
+df <- df[-7264,]
+
+
+allez.dat <- as.numeric((df$Cluster.2.Adjusted.p.value < 0.1) & (df$Cluster.2.Log2.fold.change > 0))
+names(allez.dat) <- df$Feature.Name
+mean(allez.dat)
+sum(allez.dat)
+
+allez.out <- allez(allez.dat, "org.Hs.eg", idtype = "SYMBOL")
+allezTable(allez.out)
+allezPlot(allez.out) + 
+  scale_x_continuous(limits = c(0, 50))
+```
+
+```{r}
+
+allez.dat <- as.numeric((df$Cluster.3.Adjusted.p.value < 0.1) & (df$Cluster.3.Log2.fold.change > 0))
+names(allez.dat) <- df$Feature.Name
+mean(allez.dat)
+sum(allez.dat)
+
+allez.out <- allez(allez.dat, "org.Hs.eg", idtype = "SYMBOL")
+allezTable(allez.out)
+allezPlot(allez.out) + 
+  scale_x_continuous(limits = c(0, 300))
+```
+
+
+
+```{r}
+allez.dat <- as.numeric((df$Cluster.4.Adjusted.p.value < 0.1) & (df$Cluster.4.Log2.fold.change > 0))
+names(allez.dat) <- df$Feature.Name
+mean(allez.dat)
+sum(allez.dat)
+
+allez.out <- allez(allez.dat, "org.Hs.eg", idtype = "SYMBOL")
+allezTable(allez.out)
+allezPlot(allez.out) + 
+  scale_x_continuous(limits = c(0, 1000))
+```
+
+
+```{r}
+allez.dat <- as.numeric((df$Cluster.5.Adjusted.p.value < 0.1) & (df$Cluster.5.Log2.fold.change > 0))
+names(allez.dat) <- df$Feature.Name
+mean(allez.dat)
+sum(allez.dat)
+
+allez.out <- allez(allez.dat, "org.Hs.eg", idtype = "SYMBOL")
+allezTable(allez.out)
+allezPlot(allez.out) + 
+  scale_x_continuous(limits = c(0, 50))
+```
+
+
+```{r}
+
+allez.dat <- as.numeric((df$Cluster.6.Adjusted.p.value < 0.1) & (df$Cluster.6.Log2.fold.change > 0))
+names(allez.dat) <- df$Feature.Name
+mean(allez.dat)
+sum(allez.dat)
+
+allez.out <- allez(allez.dat, "org.Hs.eg", idtype = "SYMBOL")
+allezTable(allez.out)
+allezPlot(allez.out) + 
+  scale_x_continuous(limits = c(0, 1000))
+```
+
+
+
+
+
+
+
+

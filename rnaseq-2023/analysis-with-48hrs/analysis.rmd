@@ -1,0 +1,1463 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r chunk-setup, echo=F}
+knitr::opts_chunk$set(echo=F, message=F, warning=F)
+n=10
+alpha = 0.05
+```
+
+```{r}
+library(pathfindR)
+library(org.Hs.eg.db)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(AnnotationDbi)
+library(DESeq2)
+library(allez)
+library(pheatmap)
+library(RColorBrewer)
+library(pathfindR)
+```
+
+
+```{r utility-functions}
+# Format plot title
+wrapper <- function(x, ...)
+{
+  paste(strwrap(x, ...), collapse = "\n")
+}
+
+```
+
+# Preface
+
+
+I'm copy-pasting much from the previous report to save time. 
+
+> I will put new information/changes in block quotes like this. 
+
+# Intro
+
+Hey Mayra,
+
+
+
+Below are (at least several of) the plots you asked for.
+Let me know if I missed any.
+
+For each type of plot, I included several replicates for varying number of genes to help you pick a number to display that you like. 
+
+# Heatmap of DE between each pair of treatment groups at each time
+
+## Ordered by $p$-value
+
+For each pair of treatment groups, and time combination, shows the estimated log2-fold change in expression. 
+~~For example, for the green-time, red-treatment, shows how much more (or less) highly expressed each gene was at 24 hours in the 45$\mu$M group compared to the 30$\mu$M group.~~
+
+> Removed 45vs30 Comparison. Now the green-time, purple-treatment column shows how much more (or less) highly expressed each gene was at 24 hours in the 45$\mu$M group compared to the DMSO group.
+
+```{r, include=F}
+df <- read.csv("../expression.mat", sep = "\t", row.names=1)
+df.coding <- df[rowSums(df) > 0, ]
+df.gene <- df.coding
+df.gene$gene <- rownames(df.gene)
+cts <- df.gene %>%
+  mutate(
+    symbol = (
+      AnnotationDbi::select(org.Hs.eg.db, columns = c("ENSEMBL", "SYMBOL"), keys = rownames(df.coding), keytype = "ENSEMBL") %>%
+        group_by(ENSEMBL) %>%
+        summarize(SYMBOL = SYMBOL[1]) %>%
+        data.frame(row.names = "ENSEMBL")
+    )[gene, "SYMBOL"]
+  ) %>%
+  filter(!is.na(symbol)) %>%
+  group_by(symbol) %>%
+  summarise_at(1:36, sum) %>%
+  data.frame(row.names = 1) %>%
+  round()
+
+head(cts)
+```
+
+# DE Analysis
+
+```{r include=F}
+coldata <- data.frame(
+  treatment = factor(c(30, 30, 30, 45, 45, 45, "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", "D", 30,30,30,30,30,30,30,30,30,45,45,45,45,45,45,45,45,45), levels = c("D", 30, 45)),
+  time = factor(c(48,48,48,48, 48,48,1,1,1,24,24,24,8,8,8,48,48,48,1,1,1,24,24,24,8,8,8,1,1,1,24,24,24,8,8,8), levels = c(1, 8, 24, 48)),
+  batch = as.factor(c("d", "d", "d", "d", "d", "d", "b", "c", "a", "b", "c", "a", "b", "c", "a", "d", "d", "d", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c", "a"))
+)
+coldata$batchA <- coldata$batch == "a"
+
+dds <- DESeqDataSetFromMatrix(
+  countData = cts, 
+  colData = coldata,
+  design = ~ treatment*time + batchA
+)
+
+dds <- DESeq(dds, reduced = ~time + batchA, test = "LRT")
+```
+
+
+# Data visualization
+
+First, we plot a hierarchical clustering of the data according to the raw estimated number of counts.
+The plot shows that batches a, b/c, and d have huge differences between them, which cause the batch effect to be much more prevalent than either the treatment or time effect.
+In particular, batch a seems much further than the others, while batch d seems fairly close to b/c.
+Batch d contains only samples after 48 hours, so differences between it and b/c are unsurprising.
+
+```{r}
+cts
+boxplot(log2(1 + cts))
+plot(hclust(dist(t(log2(1+cts)))))
+```
+
+
+```{r hierarchical-clustering, echo=FALSE, warning=FALSE, message=FALSE}
+ntd <- normTransform(dds)
+sampleDists <- dist(t(assay(ntd)))
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(ntd$time, ntd$treatment, ntd$group, sep="-")
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+
+A PCA plot supports this notion. 
+This one seems to suggest that the vast majority of variance in the data can be attributed to variation between batch a, and the others. 
+After that, the next largest contributor to variance seems to be differentiating between groups b/c and d, and, finally, between b and c.
+
+```{r pca-plot, echo=FALSE, warning=FALSE, message=FALSE}
+plotPCA(ntd, intgroup = c("batch"), pcsToUse = 1:2)
+```
+
+
+
+
+After normalizing, we model our data as 
+\[
+  \log_2y_{gitjk} = \mu_g + {\rm Treatment}_{gi} + {\rm Time}_{gt} + {\rm TreatmentTime}_{git} + {\rm BatchA}_{gj} + \varepsilon_{gitjk},
+\]
+a linear model with an interaction between time and treatment, which includes a batch effect for batch A to account for varying levels of gene $g$ in DMSO after 1 hour in the batch A group compared to the rest.
+The null model is set as
+\[
+  \log_2y_{gitjk} = \mu_g + {\rm Time}_{gt} + {\rm BatchA}_{gj} + \varepsilon_{gitjk},
+\]
+which still contains the batch adjustment, but now asserts that there is no treatment effect on the log-counts.
+
+
+
+For each gene, we conduct a LRT to compare the full model to the reduced, null model, and, from that obtain a $p$-value. 
+Those $p$-values are then adjusted using the Benjamini-Hochberg correction, to obtain an estimated False Discovery Rate.
+False Discovery Rate cutoff is set at `r alpha`, and a total of `r (res %>% summarize(sum(!is.na(padj) & (padj < alpha))))[1,1]` genes are found to have a treatment effect.
+
+We also extract from that model the MLE of the $\log_2$-fold change between DMSO and IC75 Atovaquone, each at 48 hours, to model the effect size of the treatment.
+The `r n` genes with the lowest FDR are reported here.
+
+```{r}
+res <- as.data.frame(results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  1 # 45 and 48 hrs
+)))
+
+resOrdered <- res[complete.cases(res),]
+resOrdered  <- resOrdered[order(resOrdered$pvalue),]
+resOrdered <- resOrdered[resOrdered$padj < alpha,]
+
+res %>% 
+  arrange(padj) %>%
+  select(log2FoldChange, pvalue, padj) %>%
+  head(n) %>%
+  mutate_if(is.numeric, ~ as.character(signif(., 3))) %>%
+  knitr::kable()
+```
+
+
+To further investigate these genes, a heatmap showing the residuals under the null model that the values are dependent only on time is displayed.
+Each row is a gene (marked on the left, along with the estimated FDR), and each column is a sample.
+Higher residuals (more red) imply that the genes in that sample are more highly expressed than on average across samples. 
+
+Looking at the one-hour columns, we see that there is often little variation between the three treatments.
+However, DDIT3, in the presence of IC75 atovaquone, does seem to be elevated compared to DMSO after only one hour.
+
+```{r residual-heatmap, echo=FALSE, warning=FALSE, message=FALSE}
+null_df <- DESeqDataSetFromMatrix(
+  countData = cts,
+  colData = coldata,
+  design = ~ time + batchA
+)
+null_df <- DESeq(null_df, reduced = ~ batchA, test = "LRT")
+
+log2mu <- log2(1 + t(t(assays(null_df)[["mu"]]) / sizeFactors(null_df)))
+resids <- log2(1 + counts(null_df, normalized = TRUE)) - log2mu
+
+nselect <- 20
+select <- rownames(resOrdered)[1:nselect]
+resids <- resids[select,]
+
+ord <- order(coldata$treatment, as.numeric(coldata$time), coldata$batchA)
+resids <- resids[,ord]
+df <- coldata[ord,] %>% dplyr::select(-c(batch, batchA))
+rownames(df) <- colnames(resids)
+
+rownames(resids) <- paste(1:nselect, '. ', rownames(resids), sep = "")
+
+pheatmap(resids, cluster_rows=FALSE, show_rownames=TRUE, show_colnames = FALSE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+
+
+
+```{r de-over-time}
+# 75 v DMSO @ 48
+de.time <- data.frame(
+  fc45.D.48 = results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  1 # 45 and 48 hrs
+))$log2FoldChange
+)
+
+# 30 v DMSO @ 48
+de.time$fc30.D.48 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  1, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 45 v DMSO @ 24
+de.time$fc45.D.24 <- results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  1, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 30 v DMSO @ 24
+de.time$fc30.D.24 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  1, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 45 v DMSO @ 8
+de.time$fc45.D.8 <- results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  1, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 30 v DMSO @ 8
+de.time$fc30.D.8 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  1, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 45 v DMSO @ 1
+de.time$fc45.D.1 <- results(dds, contrast = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+# 30 v DMSO @ 1
+de.time$fc30.D.1 <- results(dds, contrast = c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+))$log2FoldChange
+
+rownames(de.time) <- rownames(results(dds))
+de.time <- de.time[complete.cases(de.time),]
+
+gene_ord_all <- list(
+  "p" = rownames(results(dds)[order(res$padj, decreasing = F),]),
+  "up" = rownames(results(dds)[order(res$log2FoldChange, decreasing = T),]),
+  "down" = rownames(results(dds)[order(res$log2FoldChange, decreasing = F),]),
+  'any' = rownames(results(dds)[order(abs(res$log2FoldChange), decreasing = T),])
+)
+gene_ord <- sapply(gene_ord_all, function(x) {
+  x <- x[!is.na(results(dds)[x,"padj"]) & (results(dds)[x,"padj"] < 0.05)]
+}, USE.NAMES = T, simplify = F)
+gene_ord[['p']] <- gene_ord_all[['p']]
+
+de.time <- de.time[complete.cases(de.time),]
+
+
+# Plot a heatmap of diff. ex
+treatment.pairs <- c(
+"45uM v DMSO",
+"30uM v DMSO"
+)
+de.coldata <- data.frame(
+  treatment = rep(c("45uM v DMSO", "30uM v DMSO"), 4),
+  time = rep(c(48, 24, 8, 1), each = 2)
+)
+rownames(de.coldata) <- colnames(de.time)
+de.heatmap <- function(
+  n,
+  x = de.time,
+  treatment_pairs = treatment.pairs,
+  times = c(1, 8, 24, 48),
+  col_data = de.coldata,
+  title = function(n, order_by) {
+    switch(order_by,
+                  p = paste(
+                    "Estimated log2-fold change for each treatment group at each time for the",
+                    n,
+                    "genes with the smallest p-value."
+                  ),
+                  up = paste(
+                    "Estimated log2-fold change for each treatment group at each time for the",
+                    n,
+                    "genes with the greatest log fold-change with p<0.05."
+                  ),
+                  down = paste(
+                    "Estimated log2-fold change for each treatment group at each time for the",
+                    n,
+                    "genes with the least log fold-change with p<0.05."
+                  ),
+                  any = paste(
+                    "Estimated log2-fold change for each treatment group at each time for the",
+                    n,
+                    "genes with the greatest absolute log fold-change with p<0.05."
+                  )
+    )
+  },
+  title_wrapper = 40,
+  order_by = c("p", "up", "down", "any")
+) {
+  order_by <- match.arg(order_by)
+  
+  x <- x[gene_ord[[order_by]],]
+  col_data <- col_data %>%
+    filter(time %in% times) %>%
+    mutate(time = as.factor(time)) %>%
+    filter(treatment %in% treatment_pairs) %>%
+    mutate(treatment = factor(treatment, ordered = T)) %>%
+    #arrange(treatment) %>%
+    dplyr::rename("Time (Hours)" = time) %>%
+    dplyr::rename("Treatment Pair" = treatment)
+  if (length(times) <= 1) {
+    col_data <- col_data %>% dplyr::select(-c("Time (Hours)"))
+  }
+  x <- x[,colnames(x) %in% rownames(col_data)]
+  pheatmap(
+    as.matrix(x[1:n,]),
+    annotation_col = col_data,
+    cluster_rows = F, cluster_cols = F, show_colnames = F,
+    legend_labels = c("Time (Hours)", "Treatment Pair"),
+    main = wrapper(title(n, order_by), title_wrapper),
+    legend = T
+  )
+}
+```
+
+
+## Visualization of estimates of log2 fold-change
+
+```{r}
+de.heatmap(5)
+de.heatmap(10)
+de.heatmap(20)
+de.heatmap(25)
+de.heatmap(30)
+de.heatmap(50)
+```
+
+
+## Ordered by estimated effect size, restricted to FDR-controlled $p$-value < 0.05
+
+> Now I show essentially the same images, but now we sort them by estimated effect size at 48 hours between 45$\mu$M and DMSO. For brevity, I include only one image for each, rather than for a range of #genes, but can trivially include more, if desired.
+
+### Ordered by decreasing log fold-change (i.e. up-regulated)
+
+```{r}
+de.heatmap(25, order_by = "up")
+```
+
+
+
+### Ordered by increasing log fold-change (i.e. down-regulated)
+
+```{r}
+de.heatmap(25, order_by="down")
+```
+
+
+### Ordered by decreasing abs(log fold-change) (i.e. effect far from zero)
+
+```{r}
+de.heatmap(25, order_by="any")
+```
+
+
+# Barplot of DE between each pair of treatment groups at each time
+
+## Ordered by FDR-adjusted $p$
+
+
+This contains pretty much the same information as above, but in a barplot.
+It may be slightly easier to glean info from this, but fewer genes will fit while still looking nice.
+
+> I also made the same changes here that I did above.
+
+```{r}
+genes.ordered <- factor(rownames(de.time), ordered=T)
+de.time2 <- de.time
+de.time2$gene <- rownames(de.time2)
+de.time2 <- de.time2 %>%
+  pivot_longer(-c(gene)) %>%
+  mutate(treatment = de.coldata[name, "treatment"]) %>%
+  mutate(time = as.factor(de.coldata[name,"time"])) %>%
+  dplyr::rename(log2FoldChange = value)
+
+de.barplot <- function(
+    n, 
+    genes = factor(rownames(de.time)),
+    x = de.time2, 
+    title = function(n, order_by) {
+      switch(order_by,
+                  p = paste(
+                    "Bar plot of estimated log2-fold change for the",
+                    n,
+                    "genes with the smallest p-value."
+                  ),
+                  up = paste(
+                    "Bar plot of estimated log2-fold change for the",
+                    n,
+                    "genes with the greatest log fold-change with p<0.05."
+                  ),
+                  down = paste(
+                    "Bar plot of estimated log2-fold change for the",
+                    n,
+                    "genes with the least log fold-change with p<0.05."
+                  ),
+                  any = paste(
+                    "Bar plot of estimated log2-fold change for the",
+                    n,
+                    "genes with the greatest absolute log fold-change with p<0.05."
+                  )
+      )
+    },
+    order_by = c("p", "up", "down", "any")
+) {
+  order_by <- match.arg(order_by)
+  #print(head(de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n])))
+  #print(length(unique((de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n]))$gene)))
+  
+  #print(head(de.time2 %>% filter(gene %in% gene_ord[[order_by]][1:n]) %>% filter(gene %in% genes)))
+  ggplot(
+    de.time2 %>% filter(gene %in% gene_ord[[order_by]][gene_ord[[order_by]] %in% genes][1:n]),
+    aes(
+      y = gene,
+      x = log2FoldChange,
+      fill = time
+    )
+  ) +
+    geom_col(position= position_dodge(width = 0.9)) +
+    facet_wrap(~treatment) +
+    xlab("log2-Fold Change") +
+    ylab("Gene") +
+    ggtitle(wrapper(title(n, order_by))) +
+    ylim(gene_ord[[order_by]][gene_ord[[order_by]] %in% genes][n:1])
+}
+de.barplot(5)
+de.barplot(10)
+de.barplot(20)
+de.barplot(25)
+de.barplot(30)
+de.barplot(50)
+```
+
+
+## Ordered by estimated effect size, restricted to FDR-controlled $p$-value < 0.05
+
+### Ordered by decreasing log fold-change (i.e. up-regulated)
+
+```{r}
+de.barplot(30, order_by = 'up')
+```
+
+
+### Ordered by increasing log fold-change (i.e. down-regulated)
+
+```{r}
+de.barplot(30, order_by = 'down')
+```
+
+
+### Ordered by decreasing absolute log fold-change (i.e. effect far from zero)
+
+```{r}
+de.barplot(30, order_by = 'any')
+```
+
+
+
+
+# Pairwise $p$-values
+
+## Concerns
+
+
+If we want $p$-values corresponding to pairwise comparisons, (statistical mumbo-jumbo incoming, don't worry if you don't get most of it, I'll try to highlight the big picture ideas) we need to utilize a Wald test with contrasts.
+While the Wald test is capable of giving us $p$-values for DE between different treatment/time groups, ***the results of the Wald test are less reliable than those of the LRT***.
+This is especially pertinent due to the ***small sample size*** for each individual gene.
+
+Notably, the Wald test ***struggles when all values being compared are identical***.
+For example, if, for a gene $G$, we observed $0$ instances of $G$ in any of the samples at 48 hours for either DMSO or 45uM Atovaquone. 
+The Wald test requires estimating the standard error of the point-estimate, and then constructs a test-statistic by dividing the point-estimate by the standard error. 
+But, in this instance, the estimated standard error would be 0, causing a malformed test-statistic.
+The LRT, on the other hand, handles this case fine, and will simply determine the $p$-value is $1.0$.
+As such, ***this issue has the biggest effect on genes that are not actually DE***.
+However, ***it can still present problems in less extreme cases, leading to an inflated type-I error rate***.
+
+Other problems plague the Wald test, however. 
+The ***Hauck-Donner Effect*** is another one that should be mentioned. 
+It states that, in many cases, the standard error grows faster than the test-statistic.
+This could result in **genes with truly high DE point-estimates _being falsely deemed insignificant_**.
+Unfortunately, this result, unlike the previous, is more likely to effect the genes that are actually DE, than those that are not. 
+Close attention will be needed to watch for this effect.
+
+Finally, since we are using *multiple comparisons*, further $p$-value corrections will be needed to try to preserve our type-$I$ error rate. 
+In particular, I'm going to apply a Bonferonni Correction to each comparison.
+Since I'm performing 6 comparisons (comparing each treatment to DMSO at both 8 24, and 48 hours), I will multiply each of the FDR-adjusted $p$-values by 6.
+
+A summary of all contrasts (for time > 1) can be found in `results/all_genes_all_groups.csv`.
+
+```{r}
+# 75 v DMSO @ 48
+contrasts <- list(
+  h48.45vsD = c(
+    0, # Intercept
+    0, # 30 vs D
+    1, # 45 vs D
+    0, # 8 hrs vs 1 hr
+    0, # 24 hrs vs 1 hr
+    0, # 48 hrs vs 1 hr
+    0, # batch A
+    0, # 30 and 8 hrs
+    0, # 45 and 8 hrs
+    0, # 30 and 24 hrs
+    0, # 45 and 24 hrs
+    0, # 30 and 48 hrs
+    1 # 45 and 48 hrs
+  )
+)
+
+# 30 v DMSO @ 48
+contrasts$h48.30vsD <- c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  1, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+
+# 45 v DMSO @ 24
+contrasts$h24.45vsD = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  1, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+
+# 30 v DMSO @ 24
+contrasts$h24.30vsD <- c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  1, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+
+# 45 v DMSO @ 8
+contrasts$h8.45vsD = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  1, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+
+# 30 v DMSO @ 8
+contrasts$h8.30vsD <- c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  1, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+
+contrasts_all <- contrasts
+# 45 v DMSO @ 1
+contrasts_all$h1.45vsD = c(
+  0, # Intercept
+  0, # 30 vs D
+  1, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+
+# 30 v DMSO @ 1
+contrasts_all$h1.30vsD <- c(
+  0, # Intercept
+  1, # 30 vs D
+  0, # 45 vs D
+  0, # 8 hrs vs 1 hr
+  0, # 24 hrs vs 1 hr
+  0, # 48 hrs vs 1 hr
+  0, # batch A
+  0, # 30 and 8 hrs
+  0, # 45 and 8 hrs
+  0, # 30 and 24 hrs
+  0, # 45 and 24 hrs
+  0, # 30 and 48 hrs
+  0 # 45 and 48 hrs
+)
+```
+
+```{r, include=F}
+names(contrasts)
+write.table(
+  data.frame(sapply(contrasts, function(x) results(dds, contrast = x)$padj, simplify=TRUE), row.names = rownames(dds)),
+  "results/all_genes_all_groups.csv",
+  sep = ","
+)
+```
+
+
+## Number DE vs time
+
+
+The plot below shows the number of DE genes (when compared to DMSO at the same time) over time. 
+Note that, since we aren't much interested in the 1 hour time point, we keep a Bonferroni adjustment multiplier of 6, and we simply avoid inference on the 1 hour time point. 
+
+We see that the number of DE genes does seem to increase over time, with the higher dose of atovaquone having typically more DE genes than the lower.
+However, after 24 hours in the 45 uM group, the rate of new DE genes drops off, gaining only 371 genes by 48 hours, while the 30 uM group gained 1671 new DE genes in the same time. 
+
+```{r, warning=F, message=F}
+lapply(contrasts_all, function(x) {
+  results(dds, test = "Wald", contrast = x) %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("gene") %>%
+    mutate(sig = as.numeric(!is.na(padj) & padj < alpha / 6))
+}) %>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, sig) %>%
+  mutate(time = substr(comparison, 2, 3)) %>%
+  mutate(time = ifelse(
+    substr(time, 3, 3) == '.', 
+    substr(time, 2, 2),
+    as.numeric(time)
+  )) %>%
+  mutate(treatment = paste(
+    ifelse(
+      substr(comparison, 3, 3) == '.', 
+      substr(comparison, 4, 5), 
+      substr(comparison, 5, 6)
+    ),
+    "uM", sep = " "
+  )) %>%
+  group_by(time, treatment) %>%
+  summarize(genes = sum(sig)) %>%
+  mutate(time = as.factor(time)) %>%
+  #filter(sig == 1) %>%
+  ggplot(aes(x = time, y = log2(1+genes), fill = treatment)) +
+    geom_col(position = "dodge2")
+```
+
+This upset plot helps further elucidate the intersection pattern of these 
+
+```{r}
+lapply(contrasts_all, function(x) {
+  results(dds, test = "Wald", contrast = x) %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("gene") %>%
+    mutate(sig = as.numeric(!is.na(padj) & padj < alpha / 6))
+})%>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, sig) %>%
+  filter(sig == 1) %>%
+  mutate(time = substr(comparison, 2, 3)) %>%
+  mutate(time = ifelse(
+    substr(time, 3, 3) == '.', 
+    substr(time, 2, 2),
+    as.numeric(time)
+  )) %>%
+  mutate(treatment = paste(
+    ifelse(
+      substr(comparison, 3, 3) == '.', 
+      substr(comparison, 4, 5), 
+      substr(comparison, 5, 6)
+    ),
+    "uM", sep = " "
+  )) %>%
+  mutate(group = paste(treatment, " @ ", time, "hrs.", sep = "")) %>%
+  group_by(gene) %>%
+  mutate(group = list(group)) %>%
+  ggplot(aes(x = group)) +
+    geom_bar() + 
+    ggupset::scale_x_upset()
+```
+
+
+
+## Comparison in pairwise comparisons
+
+Below is a table that summarizes the number of genes that are DE in each group compared to DMSO at the same time. 
+
+The main diagonal indicates how many are in that group. For example, the top-left entry indicates that after 48 hours in 45 uM atovaquone, 3204 genes were DE, while the bottom right says that after 8 hours in 30 uM, only 10 genes were DE. 
+
+The off-diagonal entries indicate the size of overlap between the respective groups indicated by the row and column. 
+For example, the bottom left corner (or, equivalently, the top-right corner) indicates that there are 9 genes that are DE both in the 48 hours in 45 uM atovaquone vs 48 hours in DMSO, and in the 8 hours in 30 uM atovaquone vs 8 hours in DMSO. 
+Since 8 hours in 30 uM has 9 DE genes, this indicates that there is only 1 gene DE in 30 uM after 8 hours that is *NOT* DE in 45 uM after 48 hours. 
+
+A full summary of these intersections can be found in `results/gene-pairwise-significance.csv`.
+
+
+
+```{r}
+dd <- lapply(contrasts, function(x) {
+  results(dds, test = "Wald", contrast = x) %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("gene") %>%
+    mutate(sig = as.numeric(!is.na(padj) & padj < alpha / 6))
+}) %>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, sig)
+  #tidyr::pivot_wider(names_from = "gene", values_from = sig) %>%
+  #data.frame(row.names = "comparison") %>%
+  #as.matrix(dimnames = list(rownames(.), NULL)) %>%
+
+compdata <- data.frame(
+  time = factor(rep(c("48 Hours", "24 Hours", "8 Hours"), each = 2), levels = c("48 Hours", "24 Hours", "8 Hours")),
+  d1 = factor(rep(c("45 uM", "30 uM"), 3), levels = c("45 uM", "30 uM")),
+  d2 = rep(c("DMSO", "DMSO"), 3),
+  row.names = unique(dd$comparison)
+)
+
+dd <- dd %>%
+  {
+    dd <- .
+    ccs <- unique(dd$comparison)
+    combs <- combn(ccs, 2, simplify = T)
+    combs <- cbind(combs, rbind(combs[2,], combs[1,]), rbind(ccs, ccs))
+    data.frame(
+      c1 = combs[1,],
+      c2 = combs[2,],
+      n = apply(combs, 2, function(cc) {
+        (dd %>%
+          filter(comparison %in% cc) %>%
+          group_by(gene) %>%
+          summarize(b = sum(sig) == length(unique(cc))) %>%
+          summarize(b = sum(b)))[1,1, 1]
+      }),
+      time1 = sapply(combs[1,], function(x) compdata[x, "time"]),
+      time2 = sapply(combs[2,], function(x) compdata[x, "time"]),
+      d11 = sapply(combs[1,], function(x) compdata[x, "d1"]),
+      d12 = sapply(combs[1,], function(x) compdata[x, "d2"]),
+      d21 = sapply(combs[2,], function(x) compdata[x, "d1"]),
+      d22 = sapply(combs[2,], function(x) compdata[x, "d2"])
+    )
+  }
+
+dd2 <- dd %>% 
+  dplyr::select(-c(c1, c2)) %>%
+  arrange(time2, d21, d22) %>%
+  tidyr::pivot_wider(
+    id_cols = c("time1", "d11"),
+    names_from = c("time2", "d21"),
+    values_from = n,
+    values_fn = mean
+  )# %>%
+as.data.frame(dd2) %>%
+  arrange(time1, d11) %>%
+  dplyr::select(-c(time1)) %>%
+  dplyr::rename("Treatment" = "d11") %>%
+  #dplyr::rename("Treatment 2" = "d12") %>%
+  knitr::kable(align = 'llrrrrrr', format = "html") %>% 
+  #kableExtra::collapse_rows(1, valign = "top", latex_hline = "major") %>%
+  #kableExtra::kbl(booktabs = T) %>%
+  kableExtra::pack_rows(group_label = "Time", index = table(forcats::fct_inorder(as.character(dd2$time1)), useNA = "no")) %>%
+  #kableExtra::pack_rows(group_label = "Treatment 1", index = table(forcats::fct_inorder(as.character(dd2$d11)), useNA = "no")) %>%
+  kableExtra::header_separate(sep = "_")
+```
+
+
+```{r}
+dd <- lapply(contrasts, function(x) {
+  results(dds, test = "Wald", contrast = x) %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("gene") %>%
+    mutate(sig = as.numeric(!is.na(padj) & padj < alpha / 6))
+}) %>%
+  bind_rows(.id = "comparison") %>%
+  dplyr::select(comparison, gene, sig)
+  #tidyr::pivot_wider(names_from = "gene", values_from = sig) %>%
+  #data.frame(row.names = "comparison") %>%
+  #as.matrix(dimnames = list(rownames(.), NULL)) %>%
+
+
+dd2 <- dd %>%
+  {
+    dd <- .
+    ccs <- unique(dd$comparison)
+    dd2 <- data.frame(
+      expand.grid(ccs, ccs, c(0,1))
+    )
+    colnames(dd2) <-  c('c1', 'c2', 'diff')
+    dd2 <- dd2 %>% filter((c1 != c2) | (diff == 0))
+    dd2 %>% 
+      mutate(
+        diff = as.numeric(diff),
+        time1 = sapply(c1, function(x) compdata[x, "time"]),
+        time2 = sapply(c2, function(x) compdata[x, "time"]),
+        d11 = sapply(c1, function(x) compdata[x, "d1"]),
+        d12 = sapply(c1, function(x) compdata[x, "d2"]),
+        d21 = sapply(c2, function(x) compdata[x, "d1"]),
+        d22 = sapply(c2, function(x) compdata[x, "d2"])
+      ) 
+    dd2$genes <- apply(dd2, MARGIN=1, function(x) {
+      if (x['c1'] == x['c2']) {
+        (dd %>%
+          filter(
+            ((comparison == x[['c1']]) & (as.numeric(sig) == 1))
+          ) %>%
+          group_by(gene) %>%
+          summarize(n = n()) %>%
+          filter(n > 0) %>%
+          summarize(g = paste(gene, collapse = ";")))$g
+      } else if (x[["diff"]] == 0) {
+      #print(x)
+        (dd %>%
+          filter(
+            ((comparison == x[['c1']]) & (as.numeric(sig) == 1)) | (
+               (comparison == x[['c2']]) & (as.numeric(sig) == 1)
+            )
+          ) %>%
+          group_by(gene) %>%
+          summarize(n = n()) %>%
+          filter(n > 1) %>%
+          summarize(g = paste(gene, collapse = ";")))$g
+      } else { # c1 != c2, diff == 1
+        (dd %>%
+          filter(
+            ((comparison == x[['c1']]) & (as.numeric(sig) == 1)) | (
+              (comparison == x[['c2']]) & (as.numeric(sig) == 0)
+            )
+          ) %>%
+            group_by(gene) %>%
+            summarize(n = n()) %>%
+            filter(n > 1) %>%
+            summarize(g = paste(gene, collapse = ";")))$g
+      }
+    })
+    dd2
+  }
+
+
+out <- dd2 %>%
+  mutate(c2 = ifelse(c1 == c2, "", as.character(c2))) %>%
+  #arrange(c1, c2, 1-diff) %>%
+  mutate(c2 = apply(., 1, function(x) {
+    if (x['diff'] == 1) {
+      x['c2']
+    } else {
+      paste('-', x['c2'], sep = "")
+    }
+  })) %>%
+  dplyr::select(c1, c2, genes) %>% 
+  apply(., 1, function(x) {
+    # ll <- list()
+    # ll[[x[[2]]]] <- strsplit(x[[3]], ";")[[1]]
+    # mylist[[x[[1]]]] <- ll
+    strsplit(x[[3]], ";")
+    #print(length(strsplit(x[['genes']], ";")[[1]]))
+  }, simplify=F)
+
+names(out) <- apply(dd2, 1, function(x) {
+  if (x['c1'] == x['c2']) {
+    as.character(x['c1'])
+  } else if (x['diff'] == 1) {
+    paste(x['c1'], "but not", x['c2'])
+  } else {
+    paste(x['c1'], "and", x['c2'])
+  }
+})
+
+
+outdf <- data.frame(a = out[[1]])
+colnames(outdf) <- names(out[1])
+for (i in 2:length(out)) {
+  x <- out[[i]][[1]]
+  x <- c(x, replicate(nrow(outdf) - length(x), ""))
+  outdf[,names(out)[i]] <- x
+}
+write.table(outdf, "results/gene-pairwise-significance.csv", sep = ",", row.names=F)
+```
+
+
+
+# Gene Set Analysis
+
+## Allez - Binary
+
+To try and make sense of the gene-level results from our model, we apply a gene set analysis.
+First, we use the *Allez* model, which, for each gene set, checks if that set has an unusually high number of stat. sig. DE genes for a set of its size.
+
+After a Bonferonni correction, 286 gene sets with a number of genes between 5 and 500 are found to be "overly active."
+The `r n` such sets with the highest $z$-score are displayed here, and a complete list can be found in `results/allez-sigsets.csv`.
+
+```{r, message=F}
+allez.dat <- as.numeric(!is.na(results(dds)$padj) & (results(dds)$padj < alpha))
+names(allez.dat) <- rownames(dds)
+allez.out <- allez(allez.dat, "org.Hs.eg", idtype = "SYMBOL")
+write.table(
+  allezTable(allez.out) %>%
+  arrange(-abs(z.score)),
+  "results/allez-sigsets.csv",
+  sep = ",",
+  row.names = T
+)
+allezTable(allez.out) %>%
+  arrange(-abs(z.score)) %>%
+  head(n)
+```
+
+
+Allez makes no attempt to consider the overlap between these gene sets. 
+It does, however, provide a waterfall plot that helps visualize the results.
+The plot works by first taking the stat. sig. gene set that explains the greatest number of genes, placing it at the top, and plotting those genes along the x-axis.
+Then, iteratively, it takes the next stat. sig. gene set that explains the greatest number of *yet unexplained* genes, and plots them similarly, while also marking overlap between it and previously included genes. 
+
+> Note to Mayra: I have a "beta" updated version of this code that may make this more visually appealing. Let me know if that's of interest.
+
+```{r}
+allezPlot(allez.out)
+```
+
+## Allez - $-\log(p)$
+
+Allez is also very flexible, and can use any score for each gene as input. 
+If we want to prioritize more significant genes more strongly, for example, we could use $-\log(p)$ as the score.
+Using this scoring method, the top `r n` gene sets are similarly reported, and all 462 stat. sig. gene sets are saved in `results/allez-logp-sigsets.csv`.
+
+```{r, message=F}
+allez.dat.cont <- -log(results(dds)$padj)
+allez.dat.cont[is.na(allez.dat.cont)] <- 0
+names(allez.dat.cont) <- rownames(dds)
+allez.out.cont <- allez(allez.dat.cont, "org.Hs.eg", idtype = "SYMBOL")
+write.table(
+  allezTable(allez.out.cont) %>%
+  arrange(-abs(z.score)),
+  "results/allez-logp-sigsets.csv",
+  sep = ",",
+  row.names = T
+)
+allezTable(allez.out.cont) %>%
+  arrange(-abs(z.score)) %>%
+  head(n)
+```
+
+And a corresponding Allez plot is also provided.
+
+```{r}
+allezPlot(allez.out.cont)
+```
+
+
+## pathfindR
+
+We also include pathway analysis using the pathfindR model. 
+This model looks for active subnetworks of a Protein Interaction Network (PIN), and then conducts Pathway Enrichment Analysis on KEGG pathways to find those that are enriched. 
+
+This method found 247 enriched KEGG terms, of which, the 10 with the lowest $p$-value are displayed below. All such terms are contained in `results/pathfindR-active-sets.csv`.
+
+
+
+```{r}
+path.out <- run_pathfindR(
+  res %>%
+    mutate(gene = rownames(.)) %>%
+    dplyr::select(gene, log2FoldChange, padj) %>%
+    mutate(padj = ifelse(is.na(padj), 1, padj))
+)
+```
+
+
+A hierarchical clustering of these terms shows two main clusters
+
+1. Spliceosome and Ribosome
+2. The other 8
+
+This indicates that the other 8 gene sets share a great deal of genes in common, which may help explaining why, e.g., Prion Disease shows up in a dataset where we would not particularly expect it to --- the KEGG pathway for Prion Disease may simply be quite similar to other pathways, such as that of OxPhos, which we would expect to show up. 
+
+```{r}
+set.seed(42)
+clu <- cluster_enriched_terms(path.out[1:10,], use_description = T, method="hierarchical")
+clu <- cluster_enriched_terms(path.out[1:10,], use_description = F, method="hierarchical")
+```
+
+
+
+These plots show a plot of the genes of each cluster of terms, along with the direction of change. 
+As you can see, the Spliceosome and Ribosome sets share few actual genes in common, indicating that the relation between the two is a bit more complex.
+However, the other 8 terms share many genes in common.
+In fact, Parkinson, Huntington, and Prion disease pathways all look like ROS + Proteasome + Others. 
+
+
+```{r}
+term_gene_heatmap(path.out[c(1,3),], num_terms = 2, use_description = T)
+term_gene_heatmap(path.out[c(2, 4:10),], num_terms = 8, use_description = T)
+```
+
+The graph below shows a Venn Diagram for the genes in the pathways Proteasome, Parkinson Disease, and Chemical Carcinogenesis - reactive oxygen species. 
+
+Additionally, an upset can be used to see the size of various intersection patterns between these 10 gene sets. 
+
+```{r, warning=F}
+lout = "circlepack"
+p0 <- term_gene_graph(path.out[c(2, 5, 7),], use_description = T)
+g <- tidygraph::to_directed(attributes(p0$data)$graph)
+
+ggvenn::ggvenn(setNames(list(
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[1])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[2])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[3]))
+), igraph::vertex_attr(g, "name", igraph::V(g)[1:3])))
+
+p0 <- term_gene_graph(path.out, use_description = F)
+g <- tidygraph::to_directed(attributes(p0$data)$graph)
+
+ggVennDiagram::ggVennDiagram(setNames(list(
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[1])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[2])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[3])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[4])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[5])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[6])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[7])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[8])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[9])),
+  igraph::vertex_attr(g, "name", igraph::neighbors(g, igraph::V(g)[10]))
+), igraph::vertex_attr(g, "name", igraph::V(g)[1:10])))
+
+```
+
+
+Visualizations of the top 10 KEGG pathways can be found in `results/pathfindR-vis/hsa*.pdf`. 
+
+> Note for Mayra: I can easily add any other KEGG pathway to this list of visualizations. 
+
+```{r, include = FALSE}
+input_processed <- input_processing(
+  res %>%
+    mutate(gene = rownames(.)) %>%
+    dplyr::select(gene, log2FoldChange, padj) %>%
+    mutate(padj = ifelse(is.na(padj), 1, padj))
+)
+gg_list <- visualize_terms(path.out[1:10,], input_processed, is_KEGG_result = T)
+for (g in names(gg_list)) {
+  ggplot2::ggsave(
+    paste("results/pathfindR-vis/", g, ".pdf", sep = ""),
+    gg_list[[g]]
+  )
+}
+```
+
+## Individual Gene Sets
+
+Here we explore some individual gene sets of interest, and examine the DE profiles of these sets.
+
+> Note for Mayra: I can also give heatmaps for these gene sets, but for now I'm just showing the bar plots.
+
+
+### ERAD genes
+
+#### Ordered by increasing $p$
+
+This contains essentially the same info as the barplots above, but specialized to ERAD (GO:0036503) genes. 
+
+
+> 43/111 genes in ERAD had p < 0.05, which gave an Allez $z$-score of 4.22, which is not significant after a Bonferonni adjustment (need ~4.8)
+
+```{r}
+erad.genes <- (as.data.frame(org.Hs.egALIAS2EG) %>%
+  filter(gene_id %in% as.data.frame(org.Hs.egGO2ALLEGS["GO:0036503"])$gene_id) %>%
+  filter(alias_symbol %in% rownames(results(dds))) %>%
+  filter(alias_symbol %in% rownames(cts)))$alias_symbol
+'VCP' %in% erad.genes
+
+de.barplot(5, genes=erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the lowest p-value."
+)})
+de.barplot(10, genes=erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the lowest p-value."
+)})
+de.barplot(20, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the lowest p-value."
+)})
+de.barplot(25, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the lowest p-value."
+)})
+de.barplot(30, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the lowest p-value."
+)})
+de.barplot(50, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the lowest p-value."
+)})
+```
+
+
+#### Ordered by decreasing log fold-change (i.e. up-regulated)
+
+
+
+```{r}
+de.barplot(43, erad.genes, order_by = 'up', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the greatest log fold-change with p<0.05."
+)})
+```
+
+
+#### Ordered by increasing log fold-change (i.e. down-regulated)
+
+```{r}
+de.barplot(43, erad.genes, order_by = 'down', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the least log fold-change with p<0.05."
+)})
+```
+
+
+#### Ordered by decreasing absolute log fold-change (i.e. effect far from zero)
+
+```{r}
+de.barplot(43, erad.genes, order_by = 'up', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0036503 with the greatest absolute log fold-change with p<0.05."
+)})
+```
+
+
+### Oxidative stress barplots
+
+> 122/412 genes in Oxidative Stress had p < 0.05, which gave an Allez $z$-score of 3.28, which is not significant after a Bonferonni adjustment (need ~4.8)
+
+#### Ordered by increasing $p$
+
+
+```{r}
+erad.genes <- (as.data.frame(org.Hs.egALIAS2EG) %>%
+  filter(gene_id %in% as.data.frame(org.Hs.egGO2ALLEGS["GO:0006979"])$gene_id) %>%
+  filter(alias_symbol %in% rownames(results(dds))) %>%
+  filter(alias_symbol %in% rownames(cts)))$alias_symbol
+
+de.barplot(5, genes=erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the lowest p-value."
+)})
+de.barplot(10, genes=erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the lowest p-value."
+)})
+de.barplot(20, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the lowest p-value."
+)})
+de.barplot(30, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the lowest p-value."
+)})
+de.barplot(50, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the lowest p-value."
+)})
+```
+
+
+#### Ordered by decreasing log fold-change (i.e. up-regulated)
+
+
+
+```{r}
+de.barplot(30, erad.genes, order_by = 'up', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the greatest log fold-change with p<0.05."
+)})
+```
+
+
+#### Ordered by increasing log fold-change (i.e. down-regulated)
+
+```{r}
+de.barplot(30, erad.genes, order_by = 'down', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the least log fold-change with p<0.05."
+)})
+```
+
+
+#### Ordered by decreasing absolute log fold-change (i.e. effect far from zero)
+
+```{r}
+de.barplot(30, erad.genes, order_by = 'any', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0006979 with the greatest absolute log fold-change with p<0.05."
+)})
+```
+
+# Mitochondrial Fusion genes
+
+
+> 7/32 genes in Mitochondrial Fusion had p < 0.05, which gave an Allez $z$-score of -0.001, which is not significant after a Bonferonni adjustment (need ~4.8)
+
+## Ordered by increasing $p$
+
+
+```{r}
+erad.genes <- (as.data.frame(org.Hs.egALIAS2EG) %>%
+  filter(gene_id %in% as.data.frame(org.Hs.egGO2ALLEGS["GO:0008053"])$gene_id) %>%
+  filter(alias_symbol %in% rownames(results(dds))) %>%
+  filter(alias_symbol %in% rownames(cts)))$alias_symbol
+
+de.barplot(5, genes=erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the lowest p-value."
+)})
+de.barplot(10, genes=erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the lowest p-value."
+)})
+de.barplot(20, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the lowest p-value."
+)})
+de.barplot(30, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the lowest p-value."
+)})
+de.barplot(32, erad.genes, title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the lowest p-value."
+)})
+```
+
+
+#### Ordered by decreasing log fold-change (i.e. up-regulated)
+
+
+
+```{r}
+de.barplot(7, erad.genes, order_by = 'up', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the greatest log fold-change with p<0.05."
+)})
+```
+
+
+#### Ordered by increasing log fold-change (i.e. down-regulated)
+
+```{r}
+de.barplot(7, erad.genes, order_by = 'down', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the least log fold-change with p<0.05."
+)})
+```
+
+
+#### Ordered by decreasing absolute log fold-change (i.e. effect far from zero)
+
+```{r}
+de.barplot(7, erad.genes, order_by = 'any', title = function(n, order_by) {paste(
+  "Bar plot of estimated log2-fold change for the",
+  n,
+  "genes in GO:0008053 with the greatest absolute log fold-change with p<0.05."
+)})
+```
+
+
+
+
+

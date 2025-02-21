@@ -1,0 +1,225 @@
+---
+title: "Barabasi Paper Investigation"
+output: html_notebook
+---
+
+```{r}
+setwd("/mnt/hdd/AJNewton/network-synergy/barabasi-inv/")
+library(dplyr)
+library(igraph)
+library(tidyr)
+library(org.Hs.eg.db)
+```
+
+
+```{r}
+ppi <- as.data.frame(readxl::read_xlsx("human_pp_interactome.xlsx")[,1:2])
+colnames(ppi) <- c("A", "B")
+ppi$A <- as.numeric(ppi$A)
+ppi$B <- as.numeric(ppi$B)
+
+dpi <- as.data.frame(readxl::read_xlsx("human_dp.xlsx"))
+colnames(dpi) <- c("drug", "target")
+dpi
+
+drug_combs <- as.data.frame(readxl::read_xlsx("drug_combs.xlsx", sheet=4))[,1:2]
+colnames(drug_combs) <- c("A", "B")
+drug_combs <- drug_combs[-74,]
+drug_combs
+
+proteins <- unique(c(ppi$A, ppi$B, dpi$target))
+drugs <- unique(c(dpi$drug, drug_combs$A, drug_combs$B))
+net_drugs <- drugs[factor(drugs) %in% dpi[1,]]
+
+ppi$A <- as.character(ppi$A)
+ppi$B <- as.character(ppi$B)
+proteins <- unique(c(ppi$A, ppi$B, dpi$target))
+drugs <- unique(c(dpi$drug, drug_combs$A, drug_combs$B))
+dpi$target <- as.character(dpi$target)
+dpi <- dpi %>% filter(target %in% proteins)
+
+#dpi$drug <- factor(dpi$drug, levels = drugs)
+#drug_combs$A <- factor(drug_combs$A, levels = drugs)
+#drug_combs$B <- factor(drug_combs$B, levels = drugs)
+
+cancer_drivers <- read.csv("cancer-drivers.txt", header=F)[,1]
+cancer_drivers <- select(org.Hs.eg.db, cancer_drivers, "ENTREZID", "SYMBOL")[,2]
+cancer_drivers <- unique(cancer_drivers)
+```
+
+
+```{r}
+network <- list(
+  net = graph_from_edgelist(rbind(
+    as.matrix(ppi),
+    as.matrix(dpi)
+  ))
+)
+comps <- components(subgraph(network$net, proteins))
+network$net <- delete_vertices(network$net, names(comps$membership)[comps$membership != 1])
+# network$net
+net_drugs <- drugs[drugs %in% V(network$net)$name]
+net_proteins <- proteins[proteins %in% V(network$net)$name]
+
+cancer_drivers <- cancer_drivers[cancer_drivers %in% net_proteins]
+network$dp_distances <- distances(network$net, net_drugs, net_proteins) - 1
+network$pp_distances <- distances(
+  subgraph(network$net, net_proteins)
+)
+
+network$neighbors <- function(vv) {
+  neighborhood(network$net, order = 1, nodes = V(network$net)[vv], mindist = 1)[[1]]$name
+}
+
+network$distance <- function(x, y) {
+ D <- network$pp_distances[x,y]
+ D1 <- apply(D, 1, min)
+ D2 <- apply(D, 2, min)
+  (
+    sum(D1) + sum(D2)
+  ) / (
+    length(D1) + length(D2)
+  )
+}
+network$drug_drug_distance <- function(d1, d2) {
+  x = network$neighbors(d1)
+  y = network$neighbors(d2)
+  #x = x[!(x %in% y)]
+  #y = y[!(y %in% x)]
+  D <- network$pp_distances[x,y]
+  #D[is.infinite(D)] <- NA
+  # print(sum(is.na(D)))
+  # mean(D, na.rm=T)
+  D1 <- apply(D, 1, min)
+  D2 <- apply(D, 2, min)
+  (
+    sum(D1) + sum(D2)
+  ) / (
+    length(D1) + length(D2)
+  )
+}
+network$drug_diameter <- function(d1) {
+  x = network$neighbors(d1)
+  D <- network$pp_distances[x, x]
+  diag(D) <- Inf 
+  mean(apply(D, 2, min))
+}
+network$s.score <- function(d1, d2) {
+  network$drug_drug_distance(d1, d2) - (
+    network$drug_diameter(d1) + network$drug_diameter(d2)
+  ) / 2
+}
+
+deg_to_node <- list()
+degs <- degree(subgraph(network$net, net_proteins), net_proteins)
+for (protein in names(degs)) {
+  deg <- as.character(degs[protein])
+  deg_to_node[[deg]] <- c(deg_to_node[[deg]], protein)
+}
+values <- as.character(sort(as.numeric(names(deg_to_node))))
+values
+bins <- list(list(low=0,high=0, val = c()))
+i=0
+bin_size = 100
+while ( i < length(values) ) {
+  low = as.numeric(values[1+i])
+  val <- deg_to_node[[values[1+i]]]
+  while (length(val) < bin_size) {
+    i = i + 1
+    if (i == length(values)) break
+    val <- c(val, deg_to_node[[values[1+i]]])
+  }
+  if (i == length(values)) {
+    i = i-1
+  }
+  high = as.numeric(values[1+i])
+  i = i+1
+  
+  if (length(val) < bin_size) {
+    bins[[length(bins)]] <- list(
+      low = bins[[length(bins)]]$low, 
+      high = high,
+      val = c(bins[[length(bins)]]$val, val) 
+    )
+  } else {
+    bins[[length(bins) + 1]] <- list(low=low, high=high, val=val)
+  }
+}
+
+network$select_rand_proteins <- function(proteins, n_rand=1000) {
+  prots <- subgraph(network$net, net_proteins)
+  degs <- degree(prots)
+  rand_nodes <- vector("list", n_rand)
+  for (i in 1:n_rand) {
+    # rand_nodes[i] <- c()
+    for (protein in proteins) {
+      deg <- degs[[protein]]
+      for (bin in bins) {
+        if ((bin$low <= deg) & (bin$high >= deg)) {
+          rand_nodes[[i]] <- c(rand_nodes[[i]], sample(bin$val, 1))
+          break
+        }
+      }
+    }
+  }
+  rand_nodes
+}
+network$drug_disease_distance <- function(x, y) {
+  #x = network$neighbors(d)
+  #x = x[!(x %in% y)]
+  #y = y[!(y %in% x)]
+  #print(x)
+  D <- network$pp_distances[x,y]
+  #D[is.infinite(D)] <- NA
+  # print(sum(is.na(D)))
+  # mean(D, na.rm=T)
+  mean(apply(D, 2, min))
+}
+network$z.score <- function(d1, y, n_rand=1000) {
+  x = network$neighbors(d1)
+  x = x[x %in% net_proteins]
+  d <- network$drug_disease_distance(x, y)
+  
+  rand_drug_nodes <- network$select_rand_proteins(x, n_rand = n_rand)
+  rand_dis_nodes <- network$select_rand_proteins(y, n_rand = n_rand)
+  
+  ds <- c()
+  for (i in 1:n_rand) {
+    ds[i] <- network$drug_disease_distance(rand_drug_nodes[[i]], rand_dis_nodes[[i]])
+  }
+  (d - mean(ds)) / sd(ds)
+}
+rand_dis_nodes <- network$select_rand_proteins(cancer_drivers, n_rand = 10)
+mean(rand_dis_nodes[[10]] %in% colnames(network$pp_distances))
+network$z.score(drug_combs[1,1], cancer_drivers, n_rand=1000)
+
+network$s.score(drug_combs[1,1], drug_combs[1,2])
+
+drug_combs %>%
+  filter(A %in% net_drugs) %>% filter(B %in% net_drugs) %>%
+  rowwise() %>% mutate(dist = network$drug_drug_distance(A, B)) %>%
+  rowwise() %>% mutate(diamA = network$drug_diameter(A)) %>%
+  rowwise() %>% mutate(diamB = network$drug_diameter(B)) %>%
+  rowwise() %>% mutate(s = network$s.score(A, B)) %>%
+  rowwise() %>% mutate(zA = network$z.score(A, cancer_drivers, n_rand=1000)) %>%
+  rowwise() %>% mutate(zB = network$z.score(B, cancer_drivers, n_rand=1000))
+```
+
+
+```{r}
+dpi %>% filter(drug == "DB00112")
+  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

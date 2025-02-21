@@ -1,0 +1,557 @@
+---
+title: "Mouse longitudinal stuff"
+author: "AJ Fagan"
+date: "2025-01-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(splines)
+library(lme4)
+library(emmeans)
+library(jtools)
+library(ggpubr)
+```
+
+
+```{r}
+dat_full <- read.csv("data.csv")
+dat_full <- dat_full %>%
+  arrange(Time, Mouse) %>%
+  mutate(
+    logRadiance = log(Radiance),
+    id = as.factor((Mouse-1) %% 5),
+    Mouse = as.factor(Mouse),
+    Interleukin = as.factor(Interleukin),
+    Radiation = as.factor(Radiation)
+  ) %>%
+  arrange(Time, Mouse) %>%
+  dplyr::select(Date, Time, Interleukin, Radiation, Mouse, Radiance, logRadiance, DeathDate, DeathTime, DeathType, id)
+
+#dat_full[c(8,16), "Radiance"] <- c(2.01e8, 1.48e8)
+#dat_full$logRadiance <- log(dat_full$Radiance)
+
+DT::datatable(
+  dat_full,
+  options  = list(scrollX=T, scrollY=T)
+)
+```
+
+
+We model this as each of the 4 groups having the same intercept, with each each subject having a random intercept.
+Then at each time point after this up to 28 days, each group has, potentially, its own mean.
+We then examine the difference between IL61 and EV at each time point and within each group to see if their means are in fact different.
+The resulting $p$-values are adjusted using Tukey's method.
+
+
+Model does not seem to fit well.
+
+```{r}
+dat <- dat_full %>% filter(Time <= 28)
+dat <- dat %>%
+  mutate(facTime = as.factor(Time)) %>%
+  mutate(
+    InteractionIL = ifelse(Time == 0, "NoInteraction", as.character(Interleukin)),
+    InteractionR = ifelse(Time == 0, "NoInteraction", as.character(Radiation)),
+  )
+mod <- lme4::lmer(logRadiance ~ facTime + facTime:(InteractionIL * InteractionR) + (1|Mouse), data=dat)
+summ(mod)
+emm <- emmeans::emmeans(mod, ~ InteractionIL | facTime + InteractionR)
+plot(mod)
+```
+
+
+
+```{r, fig.width=16, fig.height=12}
+emm_res <- broom::tidy(emm) %>% rename(Interleukin = InteractionIL, Radiation = InteractionR)
+emm_res <- rbind(emm_res[1,], emm_res)
+emm_res <- rbind(emm_res[1,], emm_res)
+emm_res <- rbind(emm_res[1,], emm_res)
+emm_res[1:4, 1] <- rep(c("EV", "IL61"), 2)
+emm_res[1:4, 2] <- rep(c("NR", "R"), each = 2)
+dat %>%
+  ggplot(aes(x = Time, y = logRadiance, color=Interleukin)) +
+    geom_point() + 
+    geom_line(aes(x = as.numeric(facTime), y=estimate), data = emm_res) + 
+    geom_errorbar(aes(x = as.numeric(facTime), y=estimate, ymin = estimate - 2*std.error, ymax=estimate + 2*std.error), data=emm_res %>% filter(facTime != 0), position=position_dodge(5)) +
+    facet_wrap( ~ Radiation )
+```
+
+The only statistically significant (even at $\alpha = 0.1$) effect is the difference between EV and IL61 at 7 days when non-irradiated. 
+Between 0 and 7 days, IL61 tumor burden shrunk.
+After this, they grew back fast enough to rejoin the EV group, and a statistically significant change was not detected.
+
+IL61 seems to have no effect on the radiated group. 
+
+```{r}
+DT::datatable(emm_res, options=list(scrollX=T))
+contrast_results <- emmeans::contrast(emm, method="pairwise", adjust="tukey")
+DT::datatable(as.data.frame(contrast_results) %>%
+  mutate(fc = exp(abs(estimate))),
+  options = list(scrollX=T)
+  )
+```
+
+
+# ################NO NEED TO READ PAST HERE#################################
+
+
+# Mean % increase over time per group
+
+```{r}
+dat_full %>%
+  group_by(Mouse) %>%
+  mutate(p_increase = 100 * (Radiance / Radiance[1])) %>%
+  group_by(Interleukin, Radiation, Time) %>%
+  summarize(muP_increase = mean(p_increase)) %>%
+  ggplot(aes(x = Time, y = muP_increase, color = Interleukin)) +
+    geom_point() + 
+    geom_line() + 
+    facet_wrap( ~ Radiation )
+```
+
+# Mean *log*-% increase over time per group
+
+```{r}
+dat_full %>%
+  group_by(Mouse) %>%
+  mutate(p_increase = (Radiance / Radiance[1])) %>%
+  group_by(Interleukin, Radiation, Time) %>%
+  summarize(muP_increase = mean(p_increase)) %>%
+  ggplot(aes(x = Time, y = log(muP_increase ), color = Interleukin)) +
+    geom_point() + 
+    geom_line() + 
+    facet_wrap( ~ Radiation )
+```
+
+# Smoothed curves for log size over time per group and mouse
+
+
+In addition, Mouse 16 and 9 seem to have unusually high initial growth phases. 
+We will need to look out for these during this analysis.
+Further, due to death, both natural and from meeting a humane endpoint, several mice died before day 41.
+This could lead to survivor bias, as those mice with the largest tumor burdens are more likely to die or be sacrificed. 
+As such, we, at least initially, remove these times from the analysis.
+
+```{r, warning=F, message=F}
+dat_full %>%
+  ggplot(aes(x = Time, y = logRadiance, color = Interleukin)) +
+    geom_point() +
+    geom_smooth() +
+    facet_wrap( ~ Radiation)
+dat_full %>%
+  filter(Time <= 28) %>%
+  ggplot(aes(x = Time, y = logRadiance, color = Interleukin, linetype = id)) +
+    geom_point() +
+    geom_smooth() +
+    facet_wrap( ~ Radiation)
+
+dat_full %>%
+  group_by(Mouse) %>%
+  reframe(
+    d = exp((c(logRadiance, 0) - c(0, logRadiance) )[2:(n())]),
+    t = paste(
+      c(Time, "_"),
+      c("_", Time),
+      sep = " - "
+    )[2:n()]
+  ) %>%
+  filter(t == "7 - 0") %>%
+  arrange(t, -d)
+```
+
+
+```{r, include=F}
+dat %>%
+  group_by(Mouse) %>%
+  summarize(mu = mean(logRadiance)) %>%
+  arrange(mu)
+```
+
+
+A linear fit of size on time per group is likely not reasonable, as, e.g., Group A had a large initial decrease in cancer volume, followed promptly by a sudden "kick-back", while Group C appeared to grow in tumor size consistently, suggesting non-linearity in the data.
+
+The model is given as 
+
+$$
+\log Y_{gti} = \beta_0 + \mu_i + \left(\beta_1 + \beta_2 I(g = C) + \gamma_i\right)t + \varepsilon_{gti}
+$$
+
+where
+
+- $\beta_0$ is the overall at time 0
+- $\mu_i \sim N(0, \tau_0^2)$ is a random effect for the intercept for each mouse
+- $\beta_1$ is the slope for group A over time, marginal the mouse
+- $\beta_1 + \beta_2$ is the slope for group B over time, marginal the mouse
+- $\gamma_i \sim N(0, \tau_1^2)$ is a random slope for each mouse
+- $\varepsilon \sim N(0, \sigma^2)$ is an error term
+
+Note, we do not include a group-level intercept. 
+This is because that measurement was taken *before* the treatment was administered and, hence, **the two groups have the same intercept**.
+
+The residual plot below demonstrates the poor fit of this model, revealing a curved shape, where the fitted values and the residuals should be independent.
+In addition, Mouse 16 seems to have an outlying value, with an absolute pearson-residual of 3.077 at time=0. 
+However, the remainder of the time points for this Mouse seem to be fit well, so we see no reason to remove it.
+
+
+
+```{r}
+dat <- dat_full %>% filter(Time <= 28)
+mod1 <- lme4::lmer(logRadiance ~ Time + Time:Interleukin + Time:Radiation + Time:Interleukin:Radiation + (1 + Time|Mouse), dat)
+plot(mod1)
+qqnorm(resid(mod1))
+qqline(resid(mod1))
+dat %>%
+  mutate(fit = fitted(mod1)) %>%
+  ggplot(aes(x=logRadiance, y = fit, color = Mouse)) +
+    geom_point() 
+summ(mod1)
+```
+
+
+
+
+
+If we treat time as a factor variable, however, the model seems to be a better fit, though still not perfect. 
+There is a less clear relationship between the fitted and the residuals, though still present, and the residuals seem to follow a normal distribution, again with the exception of Mouse 16 at time 0. 
+
+```{r}
+dat <- dat %>%
+  mutate(facTime = as.factor(Time)) %>%
+  mutate(
+    InteractionIL = ifelse(Time == 0, "NoInteraction", as.character(Interleukin)),
+    InteractionR = ifelse(Time == 0, "NoInteraction", as.character(Radiation)),
+  )
+mod2 <- lme4::lmer(logRadiance ~ facTime + facTime:(InteractionIL * InteractionR) + (1 + Time|Mouse), data=dat)
+plot(mod2)
+qqnorm(resid(mod2))
+qqline(resid(mod2))
+DT::datatable(dat[which(abs(resid(mod2, type="pearson")) > 2.5),],
+              options = list(scrollX=T))
+```
+
+```{r, include=F, echo=F, eval=F}
+mod0 <- lm(logRadiance ~ facTime + facTime:Group:treated, data = dat %>% mutate(treated = 1*(Time > 0)))
+anova(mod0)
+```
+
+This model seems to suggest that considering the group is important in fitting the model, with an $\chi^2$-value of 21.671 on a $\chi_{12}^2$ distribution ($p\approx0.04138$).
+
+```{r}
+mod2_red <-  lme4::lmer(logRadiance ~ facTime + (1|Mouse), dat)
+DT::datatable(anova(mod2, mod2_red), 
+              options = list(scrollX=T))
+```
+
+However, the 7 day time point seems to be the only one where this effect is statistically justified, with very large $T$-statistics of 3.645 and 3.133 for groups C and D, respectively, with an estimated 12.74-fold smaller tumor for mice in group A than their counterparts in group C, and a 4.95-fold smaller tumor in group B than their counterparts in group D.
+This change decreases to 3.12/2.00-fold at 14 days, then 2.05/2.12-fold at 21 days, and finally 2.05/1.83-foldat 28 days.
+Of these, only the 7 day time-point contrasts have tukey-adjusted $p$-values less than 0.05, with $p\approx5.7e-4, 0.027$, respectively.
+
+
+```{r}
+summ(mod2)
+emm <- emmeans::emmeans(mod2, pairwise ~ InteractionIL | facTime + InteractionR)
+contrast_results <- emmeans::contrast(emm, method="pairwise", adjust="tukey")
+DT::datatable(as.data.frame(contrast_results) %>%
+  mutate(fc = exp(abs(estimate))),
+  options = list(scrollX=T)
+  )
+```
+
+
+This result suggests to me that there is strong statistical evidence that the treatment induces an initial, substantial drop in tumor size, but there is little evidence to suggest that this change lasts beyond 7 days.
+
+
+The idea that the treatment has a big initial effect, but then seems to stop working is interesting.
+Perhaps some form of resistance is being developed? 
+Or maybe it very effectively kills all of some sub-class of cell, but the remainder are left unharmed, and continuing to proliferate.
+
+A cursory glance seems to suggest that Group A mice at day 14, 21, and 28 seem to be about where Group B mice were at day 7, 14, and 21, respectively, as if the treatment simply set the tumor back 7 days. 
+I'm sure there's some statistical test that could be done to support or reject this, but I don't find that necessary, and I don't wanna throw $p$-values around willy-nilly.
+
+Neat.
+
+
+# Spline regression - *Kool-Aid Man bursts in* Oh yeah
+
+We do linear spline magic to do piecewise regression. 
+It's pretty cool. 
+
+We start with a knot at each internal point, and compare to models with the later knots removed.
+Removing the knot at time=21 results in a lower AIC, and an ANOVA comparing the two suggests that this data is not better explained by having this additional knot. 
+
+Further removing the knot at time=14, however, results in a higher AIC, and an ANOVA suggests that this spline may have non-zero impact.
+We therefore retain the spline with knots at time = 7 and 14.
+
+```{r, fig.width=16, fig.height=12}
+knots3 <- c(7,14,21)
+b3 <- as.data.frame(bs(dat$Time, degree=1, df=4))
+colnames(b3) <- paste("b3_", c("1", "2", "3", "4"), sep = "")
+knots4 <- c(7,21)
+b4 <- as.data.frame(bs(dat$Time, degree=1, df=3))
+colnames(b4) <- paste("b4_", c("1", "2", "3"), sep = "")
+b5 <- as.data.frame(bs(dat$Time, degree=1, df=2))
+colnames(b5) <- paste("b5_", c("1", "2"), sep = "")
+dat_s <- cbind(
+  dat, 
+  b3,
+  b4,
+  b5
+)
+mod3 <- lme4::lmer(logRadiance ~ 
+                     b3_1 + b3_2 + b3_3 + b3_4 +
+                     (b3_1 + b3_2 + b3_3 + b3_4):(Interleukin*Radiation) + 
+                     (1 + Time|Mouse), dat_s)
+AIC(mod3)
+
+mod4 <- lme4::lmer(logRadiance ~ 
+                     b4_1 + b4_2 + b4_3 + 
+                     (b4_1 + b4_2 + b4_3):(Interleukin*Radiation) + 
+                     (1 + Time|Mouse), dat_s)#,
+                   #control = lmerControl(optimizer="Nelder_Mead"))
+AIC(mod4)
+kableExtra::kable(anova(mod4, mod3))
+
+mod5 <- lme4::lmer(logRadiance ~ 
+                     b5_1 + b5_2 + 
+                     (b5_1 + b5_2):(Interleukin*Radiation) + 
+                     (1 + Time|Mouse), dat_s)
+AIC(mod5)
+kableExtra::kable(anova(mod5, mod4))
+
+plot(mod3)
+qqnorm(resid(mod3))
+qqline(resid(mod3))
+
+dat_t <- dat_s %>%
+  mutate(pred = predict(mod3)) %>%
+  mutate(TimeJit = Time + runif(nrow(dat), -1.5, 1.5)) %>%
+  tidyr::pivot_longer(c(logRadiance, pred)) %>%
+  mutate(ObsType = ifelse(name == "logRadiance", "Observed", "Predicted")) %>%
+  rename(logRadiance = value)
+dat_t %>%
+  ggplot(aes(x=Time, y=logRadiance, color=Interleukin, shape=ObsType)) +
+    geom_point(size=4) +
+    # geom_smooth(
+    #   aes(x=Time, y=logRadiance, color=Interleukin),
+    #   data = dat_t,
+    #   method = lm,
+    #   formula = y ~ bs(x, degree=1, df=4),
+    #   inherit.aes = F
+    # ) +
+    geom_line(
+      aes(x = Time, y = pred),
+      data=dat_t %>% 
+        filter(id == '0', ObsType =='Observed') %>%
+        mutate(pred = predict(mod3, newdata=., re.form=NA)) ,
+      inherit.aes = T
+    ) +
+    geom_path(
+      arrow=arrow(
+        length=unit(0.15, "inches")
+      ),
+      aes(x=Time, y=logRadiance, group=paste(Time, Mouse)),
+      data = dat_t,
+      inherit.aes = F,
+      linewidth=0.5
+    ) +
+    facet_wrap( ~ Radiation)
+dat_t %>% 
+        filter(id == '0', ObsType =='Observed') %>%
+        mutate(logRadiance = predict(mod4, newdata=., re.form=NA))
+```
+
+Another ANOVA comparing the full model to the reduced, where the splines are not drawn per group, again suggests that the Treatment group is a pertinent factor ($p\approx0.00037$). 
+The $T$-statistics from this model do further support the claim that there is this drop-down/bounce-back effect.
+Treatment group C is expected to be 12.78-fold greater in size than in group A after the first 7 days!
+
+Immediately following that, group A mice are expected to grow 11.04-fold, while group C mice are expected to grow only 2.51-fold.
+
+Then, at 21 and 28 days, groups A and C are expected to grow 1.80- and 1.46-fold, respectively. 
+This indicates that there is some, though very weak, evidence to suggest that after the initial bounce-back, group A continues to grow at a faster rate than does group C.
+
+
+```{r}
+mod3_red <- lme4::lmer(logRadiance ~ bs(Time, degree = 1, df=3) + (1+Time|Mouse), dat_s)
+kableExtra::kable(anova(mod3, mod3_red))
+summ(mod3)
+b3_subset <- as.data.frame(bs(c(0, 7, 14, 21, 28), degree=1,df=4))
+colnames(b3_subset) <- colnames(b3)
+time_grid <- data.frame(Time = c(0,7,14,21,28), b3_subset)
+
+rg <- ref_grid(mod3,  # Use Time for readability
+        cov.reduce = F,
+        mode="satterth"
+      ) 
+rg2 <- comb_facs(rg, c("b3_1", "b3_2", "b3_3", "b3_4"), "Time", drop=T)
+levels(rg2)$Time <- time_grid$Time
+emm <- emmeans(rg2, ~ Interleukin | Time + Radiation, cov.reduce=F)
+contrast_results <- emmeans::contrast(emm,  method="pairwise", adjust="tukey")
+# contrast_results
+emmt <- emmeans::emmeans(rg2, ~ Time | Radiation + Interleukin)
+contrast_resultst <- emmeans::contrast(emmt, method="revpairwise", adjust="tukey")
+DT::datatable(broom::tidy(contrast_results) %>% 
+  arrange(Time, Radiation) %>%
+  dplyr::select(c(Time, Radiation, estimate, std.error, p.value)) %>%
+  mutate(fc = exp(estimate)),
+  options = list(scrollX=T))
+DT::datatable(broom::tidy(contrast_resultst) %>% 
+  mutate(T1 = as.numeric(substr(contrast, 5, 6))) %>%
+  mutate(T2 = as.numeric(substr(contrast, 14, 15))) %>%
+  mutate(T2 = ifelse(is.na(T2), 0, T2)) %>%
+  dplyr::select(c(T1, T2, Interleukin, Radiation, estimate)) %>%
+  arrange(T1-T2, T1, T2, Radiation, Interleukin, Radiation) %>%
+  mutate(fc = exp(estimate)),
+  options=list(scrollX=T))
+```
+
+
+
+For funsies, let's see if a degree 2 spline is a better fit.
+
+```{r}
+knots3 <- c(7,14,21)
+b3s <- bs(dat$Time, degree=2, df=4)
+b3 <- as.data.frame(b3s)
+colnames(b3) <- paste("b3_", c("1", "2", "3", "4"), sep = "")
+knots4 <- c(7,14)
+b4 <- as.data.frame(bs(dat$Time, degree=2, df=3))
+colnames(b4) <- paste("b4_", c("1", "2", "3"), sep = "")
+b5 <- as.data.frame(bs(dat$Time, degree=2, df=2))
+colnames(b5) <- paste("b5_", c("1", "2"), sep = "")
+dat_s2 <- cbind(
+  dat, 
+  b3,
+  b4,
+  b5
+)
+mod6 <- lme4::lmer(logRadiance ~ 
+                     b3_1 + b3_2 + b3_3 + b3_4 +
+                     (b3_1 + b3_2 + b3_3 + b3_4):(Interleukin*Radiation) + 
+                     (1 + Time|Mouse), dat_s2)
+AIC(mod6)
+mod7 <- lme4::lmer(logRadiance ~ 
+                     b4_1 + b4_2 + b4_3 + 
+                     (b4_1 + b4_2 + b4_3):(Interleukin*Radiation) + 
+                     (1 + Time|Mouse), dat_s2)
+AIC(mod7)
+plot(mod6)
+qqnorm(resid(mod6))
+qqline(resid(mod6))
+```
+
+The full model is rank deficient, so it can't really be accurately compared.
+However, removing again, 1 dimension from the basis matrix gives a full rank model matrix, and it reduces the AIC. 
+And, while it makes for a pretty visual and lower AIC, it has a higher BIC, indicating that this may just be an overcomplication of the generating model.
+This overcomplication removes much of the model's explainability. 
+I don't feel it's a good choice for a model. But it sure is fun!
+
+
+```{r, fig.width=16, fig.height=12}
+summ(mod6)
+dat_t2 <- dat %>%
+  mutate(pred = predict(mod6)) %>%
+  mutate(Time = Time + runif(nrow(dat), -1.5, 1.5)) %>%
+  tidyr::pivot_longer(c(logRadiance, pred)) %>%
+  mutate(ObsType = ifelse(name == "logRadiance", "Observed", "Predicted")) %>%
+  rename(logRadiance = value)
+dat_t2 %>%
+  ggplot(aes(x=Time, y=logRadiance, color=Interleukin, shape=ObsType)) +
+    geom_point(size=4) +
+    geom_smooth(
+      aes(x=Time, y=logRadiance, color=Interleukin),
+      data = dat_t2,
+      method = lm,
+      formula = y ~ bs(x, degree=2, df=4),
+      inherit.aes = F
+    ) +
+    geom_path(
+      arrow=arrow(
+        length=unit(0.15, "inches")
+      ),
+      aes(x=Time, y=logRadiance, group=paste(Time, Mouse)),
+      data = dat_t2,
+      inherit.aes = F,
+      linewidth=0.5
+    ) +
+    facet_wrap( ~ Radiation)
+dat_t2 <- dat_s %>%
+  mutate(pred = predict(mod6)) %>%
+  mutate(TimeJit = Time + runif(nrow(dat), -1.5, 1.5)) %>%
+  tidyr::pivot_longer(c(logRadiance, pred)) %>%
+  mutate(ObsType = ifelse(name == "logRadiance", "Observed", "Predicted")) %>%
+  rename(logRadiance = value)
+dat_t2 %>%
+  ggplot(aes(x=Time, y=logRadiance, color=Interleukin, shape=ObsType)) +
+    geom_point(size=4) +
+    # geom_smooth(
+    #   aes(x=Time, y=logRadiance, color=Interleukin),
+    #   data = dat_t,
+    #   method = lm,
+    #   formula = y ~ bs(x, degree=1, df=4),
+    #   inherit.aes = F
+    # ) +
+    geom_line(
+      aes(x = Time, y = pred),
+      se=F,
+      data= {
+        dat_t2_tmp <- dat_t2[c(),]
+        for (i in seq(0, to=28, length.out = 1000)) {
+          dat_t2_tmp_j <- dat_t2 %>%
+            filter(id == '0', ObsType =='Observed', Time==0) %>%
+            mutate(Time = Time + i) 
+          #dat_t2_tmp_j[,c("b3_1", "b3_2", "b3_3", "b4_4")] <- bs(dat_t2_tmp_j, df=4, degree=2)
+          #dat_t2_tmp_j <- dat_t2_tmp_j %>%
+            #mutate(pred = predict(mod6, newdata=., re.form=NA))
+          dat_t2_tmp_j$Time <- dat_t2_tmp_j$Time
+          dat_t2_tmp <- rbind(dat_t2_tmp, dat_t2_tmp_j)
+        }
+        dat_t2_tmp[,c("b3_1", "b3_2", "b3_3", "b4_4")] <- predict(b3s, dat_t2_tmp$Time)
+        dat_t2_tmp$pred <- predict(mod6, newdata = dat_t2_tmp, re.form=NA)
+        dat_t2_tmp
+      },
+      inherit.aes = T
+    ) +
+    geom_path(
+      arrow=arrow(
+        length=unit(0.15, "inches")
+      ),
+      aes(x=Time, y=logRadiance, group=paste(Time, Mouse)),
+      data = dat_t,
+      inherit.aes = F,
+      linewidth=0.5
+    ) +
+    facet_wrap( ~ Radiation)
+
+dat_t2_tmp <- dat_t2[c(),]
+for (i in seq(0, to=28, length.out = 1000)) {
+  dat_t2_tmp_j <- dat_t2 %>%
+    filter(id == '0', ObsType =='Observed', Time==0) %>%
+    mutate(Time = Time + i) 
+  #dat_t2_tmp_j[,c("b3_1", "b3_2", "b3_3", "b4_4")] <- bs(dat_t2_tmp_j, df=4, degree=2)
+  #dat_t2_tmp_j <- dat_t2_tmp_j %>%
+    #mutate(pred = predict(mod6, newdata=., re.form=NA))
+  dat_t2_tmp_j$Time <- dat_t2_tmp_j$Time
+  dat_t2_tmp <- rbind(dat_t2_tmp, dat_t2_tmp_j)
+}
+dat_t2_tmp[,c("b3_1", "b3_2", "b3_3", "b4_4")] <- bs(dat_t2_tmp$Time, df=4, degree=2)
+dat_t2_tmp$pred <- predict(mod6, newdata = dat_t2_tmp, re.form=NA)
+dat_t2_tmp[4000,]
+dat_s2 %>%
+  mutate(pred = predict(mod6, re.form=NA)) %>%
+  ggplot(aes(x=Time, y = logRadiance, color=Interleukin)) +
+    geom_line(aes(y = pred)) + 
+    facet_wrap( ~ Radiation ) + 
+    coord_cartesian()
+```
+
+
+
+```{r}
+dat_t2_tmp[3000:4000,]
+```
+

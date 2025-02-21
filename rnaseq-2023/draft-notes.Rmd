@@ -1,0 +1,84 @@
+---
+title: "Draft Notes"
+author: "AJ Fagan"
+date: "2025-01-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# My name
+
+Could you change my name from Alex J. Fagan to Alexander J. Fagan?
+
+# Figures
+
+## Potential $p$-hacking in some representations
+
+My main issue with the figures is the inclusion of pairwise $p$-values such as for ULBP2/MICB in Fig 7A and CXCL8/10 in Fig 7B. 
+It seems to me that, with an FDR-adjusted $p$-value greater than 0.05, a more anti-conservative threshold than I typically like to employ, there is little evidence to suggest a treatment effect, and so it doesn't seem right to go back and say "but actually it is." 
+Going back and adding the $p$-values from the pairwise comparison seems, firstly, confusing --- why are there 2 different $p$-values? 
+And second, and more importantly, it feels like $p$-hacking --- just choosing the model that gives us a small enough $p$-value. 
+I think it would be dishonest to leave these in.
+
+On a similar note, for a similar reason, Supp. Fig 1 should be replaced with the one in the attached file result-generator.html, and the second sentence in the second paragraph should be changed from:
+
+> Our analysis revealed concentration and time-dependent transcriptional changes beginning at 8 hours post-treatment. The number of differentially expressed genes in atovaquone-treated OVCAR3 cells increased over time from 18 at 8 hours to 3091 at 48 hours in cells treated with IC50 and from 490 at 8 hours to 4779 at 48 hours in cells treated with IC75 concentrations. 
+
+to (changes are in bold)
+
+> Our analysis revealed concentration and time-dependent transcriptional changes beginning at 8 hours post-treatment. The number of **statistically significant** differentially expressed genes in atovaquone-treated OVCAR3 cells increased over time from **10** at 8 hours to **1760** at 48 hours in cells treated with IC50 and from **228** at 8 hours to **2861** at 48 hours in cells treated with IC75 concentrations. 
+
+or
+
+> Our analysis revealed concentration and time-dependent transcriptional changes beginning at 8 hours post-treatment. The number of **genes we determined to be differentially expressed** in atovaquone-treated OVCAR3 cells increased over time from **10** at 8 hours to **1760** at 48 hours in cells treated with IC50 and from **228** at 8 hours to **2861** at 48 hours in cells treated with IC75 concentrations. 
+
+These changes reflects the fact that we only find a gene to be statistically significantly DE in a condition if *both* the overall FDR-adjusted $p$-value, and the condition-level Bonferonni-Corrected, FDR-adjusted $p$-value are below a certain threshold ($\alpha = 0.05$).
+
+Additionally, it elucidates that these are not necessarily *true* differentially expressed genes, but just the ones we found to be DE via our statistical model. 
+Similar changes are welcome anywhere you discuss genes being DE, but it's especially important to say it once at the beginning. 
+
+I think the modification to Supp. Fig. 1 also helps sell the story. Before, it looked like the dominant sources of DE genes were 45 $\mu$M at 24 and 48 hours *individually*.
+This is rather odd --- we would like if most of the DE genes at 24 hours were also DE at 48 hours.
+This modification doesn't fix this entirely, but it alleviates the issue a bit.
+
+## Inconsistent p-values fix
+
+It seems for many of your figures, you used an addition cutoff of "**** = p<0.0001", while mine stopped at 3 stars. 
+This makes it seem like the figures I made have larger $p$-values than they really do.
+I've added this 4th star to the barplots, in the attached result-generator.html file.
+
+Further, I think it would be smart to include all cutoffs ("." = p < 0.1, ... "****" = p < 0.0001), instead of just the ones present. 
+This helps indicate lower bounds on the $p$-value, in the case of, say, 2 or 3 stars, and just keeps consistency between figures.
+
+Further, where applicable, (all of my plots that display a $p$-value, or discuss DE genes), it may be worth mentioning that the $p$-values are FDR-adjusted using the Benjamini-Hochberg procedure.
+
+
+## Indicate KEGG pathways are KEGG pathways
+
+Figure captions that mention pathways should mention that they are KEGG pathways.
+
+## Supp. Fig 1
+
+I think this should specify that it is the number of DE genes compared to DMSO **in the same condition**.
+It may also be worth mentioning, on top of the FDR-adjustment of the $p$-value, that a further Bonferonni correction was applied, making the threshold for statistical significance 0.05/6.
+
+## Fig 2B
+
+1. You put "via PathfindR" twice.
+2. It is probably worth mentioning that the clustering was performed by PathfindR, and is not related to other grouping's we include in some figures.
+
+## Supp. Fig 4
+
+SLC7A11 and G6PD are flipped on top and bottom. Is this intentional?
+
+
+
+
+
+
+
+
+

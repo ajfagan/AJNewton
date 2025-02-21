@@ -1,0 +1,612 @@
+---
+title: "Longitudinal/Survival Analysis of Murine Model"
+author: "AJ Fagan"
+date: "15 May, 24"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+```{r package-loading, echo=F, message = F, warning = F, results='hide'}
+library(survival)
+library(survminer)
+library(ggsurvfit)
+library(dplyr)
+library(permGS)
+library(nlme)
+library(lme4)
+library(permutes)
+library(emmeans)
+library(tidyr)
+```
+
+## Data
+
+Presumably, 12 mice were given cancer.
+Then these mice were divided into 2 groups of 6, and each group was administered either 200mg/kg Atovaquone or Vehicle at some frequency I do not know.
+The mice were followed for 29 days, recording tumor volume in mm$^3$ on days 1, 4, 8, 11, 15, 18, 22, 25, and 29.
+A humane endpoint of 2000 mm$^3$ was selected, at which point, the mouse was sacrificed.
+
+```{r data-loading, echo=F, results='hide', include=F}
+setwd("/mnt/hdd/newton/patankar/mouse-tumor-volume/")
+df <- read.csv("data.csv") %>%
+  filter(group == 1) %>%
+  mutate(treatment = ifelse(treatment == "treatment", "Atovaquone", "Vehicle")) %>%
+  mutate(sex = ifelse(sex == "m", "Male", "Female")) %>%
+  mutate(status = volume > 2000)
+# table(df$volume, df$treatment, df$sex)
+head(df)
+```
+
+```{r data-vis, echo = F}
+ggplot(df, aes(x = time, y = log(volume), col = treatment, group = id)) +
+  geom_line() + 
+  geom_point() +
+  xlab("Time (Days)") +
+  ylab("log Volume") +
+  facet_wrap(~ sex) +
+  ggtitle("Change in Volume over time, per mouse")
+
+ggsurvplot_facet(
+  survfit2(Surv(time, status) ~ treatment + sex, df), 
+  data = df,
+  type = "survival", 
+  # legend = "top", 
+  # legend.labs = c(
+  #   "Atovaquone-Female", 
+  #   "Atovaquone-Male",
+  #   "Vehicle-Female",
+  #   "Vehicle-Male"
+  # ),
+  facet.by = "sex",
+  # palette = c("red", "red", "blue", "blue"),
+  # linetype = c(1,3,1,3),
+  size = 1.25,
+  alpha = 1,
+  title = "Kaplan-Meier Survival Curves for each of the 4 groups"
+)
+```
+
+## Survival Analysis
+
+We begin by performing a survival analysis to test whether treatment decreased likelihood of meeting the humane endpoint.
+The first model we employ is a Cox Proportional Hazards (PH) model, treating sex of mouse as a stratifying variable, and treatment group as the predictor.
+
+```{r coxph, echo=F}
+df.surv <- df %>%
+  group_by(id) %>%
+  filter(time == max(time)) %>%
+  mutate(surv = Surv(time, volume > 2000))
+
+m1 <- coxph(surv ~ treatment + strata(sex), data = df.surv, x = TRUE)
+x <- summary(m1)
+# x$sctest # Score-test: p = 0.05606601
+# x$logtest # LR-test: p = 0.04861855
+# x$woldtest # Wald-test: p = 0.9189695
+m1
+```
+
+While the Wald test of a treatment effect shows a $p$-value of 0.0919, which indicates minor evidence against the null, such tests are not reliable for small sample sizes.
+Therefore, we prefer the Likelihood-Ratio Test (LRT), which is more reliable in small-sample cases such as these.
+The LRT returns a $p$-value of 0.04862, which indicates a statistically significant deviation from the null model, and hence, we conclude that there is a treatment effect in terms of reaching the humane endpoint.
+In particular, the hazard is estimated to be about 6.56 times greater in the Vehicle group than in the Atovaquone group, indicating that treatment with Atovaquone may be protective against reaching the humane endpoint.
+This result is demonstrated in the plot below.
+
+```{r estimated-survival-curves, echo = F}
+plot(
+  survfit(m1, 
+          newdata = data.frame(
+            treatment = c("Vehicle", "Vehicle", "Atovaquone", "Atovaquone"),
+            sex = c("Male", "Female", "Male", "Female")
+          )
+  ), 
+  col = c("red", "red", "blue", "blue"),
+  lty = c(1, 2, 1, 2),
+  xlab = "Time (Days)",
+  ylab = "Estimated Survival Probability"
+)
+legend(1, 0.6, 
+       legend = c(
+         "Vehicle-Male", 
+         "Vehicle-Female", 
+         "Atovaquone-Male",
+         "Atovaquone-Female"
+         ),
+       col = c("red", "red", "blue", "blue"),
+       lty = c(1,2,1,2)
+       )
+title("Estimated survival curves for each of the 4 groups")
+```
+
+The plot below shows the DFBETA for each mouse, and reveals that mouse 858076 is influential in this curve fit.
+Of the 3 females in the treatment group, she was the only one who met the humane endpoint, meeting it at 22 days, while the other two were right-censored after 29 days.
+Therefore, it is unsurprising that she would be influential.
+Without a larger dataset, it would be detrimental to the analysis to remove her.
+
+```{r cox-diagnostics, echo=F, warning=F, message=F}
+# cox.zph(m1)
+# ggcoxzph(cox.zph(m1))
+# ggcoxdiagnostics(m1, type = "deviance")
+x <- ggcoxdiagnostics(m1, type = "dfbeta")
+#plot(m1)
+x
+
+```
+
+```{r finding-surv-problem-child, echo=F, include=F}
+which(abs(x$data$res) > 2/sqrt(12) ) # nine
+df[9,]
+```
+
+While the LRT is more stable than the Wald test with our sample size, it may still not be reasonable to assume that the test statistic follows its asymptotic distribution.
+Therefore, we include a second model, which conducts an exact log-rank permutation test.
+This model is unable to account for sex as a stratifying variable, but it enables us to avoid asymptotics.
+There may be other exact test which can also account for sex, and they would be worth exploring.
+
+This test returns a $p$-value of 0.0520.
+While above $0.05$, it is close enough to ease my mind concerning the outcome of the previous model.
+Therefore, I believe it safe to conclude that Atovaquone does reduce the risk of meeting the humane endpoint.
+
+```{r exact-log-rank, echo=F, include=F}
+m2 <- exactLR(formula = surv ~ treatment, data = df.surv, "exact")
+m2
+```
+
+## Tumor Volume at 15 Days
+
+Next, we analyze tumor volumes at day 15 for differences between Atovaquone and Vehicle.
+In particular, to control for varying starting tumor sizes, we compare log-fold change in tumor volume from day 1.
+The scatter plot below seems to indicate that the atovaquone group may have a smaller increase in tumor volume by day 15 among the males, although this difference seems negligible in females.
+
+```{r day-15-plot, echo=F}
+df.15 <- df %>%
+  group_by(id) %>%
+  mutate(lfc = log(volume / min(volume))) %>%
+  filter(time == 15)
+# df.15
+
+ggplot(df.15, aes(x = lfc, y = treatment)) +
+  facet_wrap(~ sex) +
+  geom_point() +
+  xlab("log-fold change in tumor volume") +
+  ggtitle("Scatter plot of the log-fold change in tumor volume at day 15")
+```
+
+We test for a treatment effect by regressing log-fold change on treatment, with a random effect for sex, and we get a $p$-value close to 0.4178.
+Even fitting log-fold change to treatment and sex with an interaction shows no statistically significant association at even the level $\alpha = 0.02$.
+Therefore, we conclude that there is insufficient evidence to suggest that Atovaquone causes, on average, decreased growth in tumor volume over 15 days relative to Vehicle.
+
+```{r nonparam-15, echo=F, include = F}
+m15 <- lme(lfc ~ treatment, random = ~ 1|sex, data = df.15)
+m15 <- lm(lfc ~ treatment * sex, data = df.15)
+anova(m15)
+```
+
+## Longitudinal
+
+At 15 days, one mouse, 862103, a female on Vehicle, was sacrificed due to the humane endpoint.
+Simple comparisons of the treatment groups at each time point after 15 days would, therefore, be biased, as they cannot account for this mouse that had a very large tumor, relative to most other mice.
+Any such attempt would conclude that the Vehicle group was performing better than it really did.
+
+Therefore, in order to compare tumor volumes at timepoints beyond 15 days, we utilize a longitudinal analysis of the tumor volumes.
+
+In particular, let $w_{ijk}(t)$ denote the tumor volume in the $i^{th}$ mouse of sex $k$ under treatment $j$ at time $t$.
+Then we fit a random intercept model, regressing on time and sex, and including an interaction effect between time and treatment (no treatment effect because the effect at time 0 is 0).
+$$
+w_{ijk}(t) = \beta_0 + (\beta_1 + T_j)t + S_k + \alpha_{ijk} + \varepsilon_{ijkt},
+$$ where
+
+-   $\beta_0$ is the intercept, the mean log-volume (mm$^3$) on day zero, marginal all independent variables (should not be interpreted in this context, as day 0 is not in the range of our data),
+-   $\beta_1$ is the mean growth rate of log-volume, marginal all other variables,
+-   $T_j$ are the treatment effects, and $\sum_j T_j = 0$,
+-   $S_k$ are the sex effects, and $\sum_k S_{k} = 0$,
+-   $\alpha_{ijk}$ is a random intercept for each mouse, and $\alpha_{ijk}\sim_{iid} N(0, \sigma_a^2)$,
+-   $\varepsilon_{ijkt}$ is an error term for each mouse at each time, and $\varepsilon_{ijkt}\sim_{iid} N(0, \sigma^2)$.
+
+We compare this model to one without a sex effect.
+The reduced model has lower AIC, BIC, and an Analysis of Deviance LRT found little evidence against $\gamma_{Male} = \gamma_{Female} = 0$.
+Therefore, we drop this term going forward, giving our model as 
+$$
+  M_0: w_{ijk}(t) = \beta_0 + (\beta_1 + T_{j})t + \alpha_{ijk} + \varepsilon_{ijkt}.
+$$
+
+```{r longitudinal-sex-testing, echo = F, warning=F, message=F}
+# df.long <- read.csv("data.csv")
+df.long <- df[order(df$time, decreasing = T),]
+df.long <- df.long %>%
+  mutate(id = as.factor(id)) %>%
+  mutate(time2 = time^2) %>%
+  mutate(log_volume = log(volume))
+
+long.mod <- lmer(log_volume ~ time + sex + time:treatment +  (1|id), df.long)
+long.mod2 <- lmer(log_volume ~ time + time:treatment + (1|id), df.long)
+anova(long.mod, long.mod2)
+```
+
+```{r long-diagnostic-data-prep, include=F}
+# Data for diagnostics
+df.diag <- df.long %>%
+  mutate(resid = resid(long.mod2, type = "response")) %>%
+  mutate(fitted = fitted(long.mod2)) %>%
+  # mutate(std.resid2 = residuals(long.mod2, type = "response", scaled = T)) %>%
+  mutate(std.resid = rstudent(long.mod2)) %>%
+  mutate(leverage = hatvalues(long.mod2)) %>%
+  mutate(cooks = cooks.distance(long.mod2))
+df.diag %>%
+  mutate(cks = std.resid^2 / 3 * leverage / (1 - leverage))
+```
+
+The residual-fitted plot suggests there may be some non-linear relation between the outcome and predictors.
+Therefore we try fitting a curve with a quadratic time effect.
+
+```{r long-resid-vs-fitted, echo=F, warning=F, message=F}
+# Residuals vs Fitted
+ggplot(df.diag, aes(x = fitted, y = resid, shape = sex, col=treatment))  +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_smooth(se = T, aes(x = fitted, y = resid), inherit.aes = F) +
+  xlab(expression(Fitted ~ log(Volume) ~~ (mm^3))) +
+  ylab("Residual")
+```
+
+We compare several models, and select the one with the lowest AIC:
+
+$$
+  M_1: w_{ijk}(t) = \beta_0 + (\beta_1 + T_{1j})t + (\beta_2 + T_{2j})t^2 + \alpha_{ijk} + \varepsilon_{ijkt},
+$$ 
+$$
+  M_2: w_{ijk}(t) = \beta_0 + (\beta_1 + T_{1j})t + \beta_2 t^2 + \alpha_{ijk} + \varepsilon_{ijkt},
+$$ 
+$$
+  M_3: w_{ijk}(t) = \beta_0 + (\beta_1 + T_{1j})t +  T_{2j} t^2 + \alpha_{ijk} + \varepsilon_{ijkt}.
+$$ where:
+
+-   $\beta_0$ is the intercept, the mean log-volume (mm$^3$) on day zero, marginal all other variables (should not be interpreted in this context, as day 0 is not in the range of our data),
+-   $\beta_1, \beta_2$ control for growth rate of log-volume, marginal all other variables,
+-   $T_{\cdot j}$ are the treatment effects, and $\sum_jT_{1j} = \sum_jT_{2j} = 0$,
+-   $\alpha_{ijk}$ is a random intercept for each mouse, and $\alpha_{ijk} \sim_{iid} N(0, \sigma_a^2)$,
+-   $\varepsilon_{ijkt}$ is an error term for each mouse at each time, and $\varepsilon_{ijkt} \sim_{iid} N(0, \sigma^2)$.
+
+```{r quad-fitting, echo=F, results='hide', include=F}
+quad.mod <- lmer(log_volume ~ time + time2 + (time:treatment + time2:treatment) +  (1|id), df.long)
+quad.mod2 <- lmer(log_volume ~ time + time2 + (time:treatment) +  (1|id), df.long)
+quad.mod3 <- lmer(log_volume ~ time + (time:treatment + time2:treatment) +  (1|id), df.long)
+
+AIC(long.mod2)
+AIC(quad.mod)
+AIC(quad.mod2)
+AIC(quad.mod3)
+```
+
+Of these models, including $M_0$, $M_2$, the model with an overall quadratic time effect, but no quadratic time-treatment interaction, has the lowest AIC of 32.45.
+
+```{r quad-diagnostics, include = F}
+# Data for diagnostics
+quad.diag <- df.long %>%
+  mutate(resid = resid(quad.mod2, type = "response")) %>%
+  mutate(fitted = fitted(quad.mod2)) %>%
+  # mutate(std.resid2 = residuals(long.mod2, type = "response", scaled = T)) %>%
+  mutate(std.resid = rstudent(quad.mod2)) %>%
+  mutate(leverage = hatvalues(quad.mod2)) %>%
+  mutate(cooks = cooks.distance(quad.mod2))
+
+# quad.diag %>%
+#   mutate(cks = std.resid^2 / 3 * leverage / (1 - leverage))
+```
+
+This model seems to much more reasonably adhere to the assumption of linearity, as evidenced by the fitted-residual plot below.
+
+```{r quad-resid-vs-fitted, echo=F, message=FALSE, warning=FALSE}
+# Residuals vs Fitted
+ggplot(quad.diag, aes(x = fitted, y = resid, shape = sex, col=treatment))  +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_smooth(se = T, aes(x = fitted, y = resid), inherit.aes = F) +
+  xlab(expression(Fitted ~ log(Volume) ~~ (mm^3))) +
+  ylab("Residual")
+```
+
+The location-scale plot shows no clear evidence of heteroscedasticity, or any pattern, providing evidence for goodness of fit.
+
+```{r long-std-resid-vs-fitted, echo=F, warning=F, message=F}
+# Standardized Residuals vs Fitted
+ggplot(quad.diag, aes(x = fitted, y = sqrt(abs(std.resid)), col = treatment, shape = sex)) +
+  geom_point() + 
+  geom_smooth(se = F, aes(x = fitted, y = sqrt(abs(std.resid))), inherit.aes = F) +
+  ylab(expression(sqrt("|" ~ Standardized~Residuals ~ "|"))) +
+  xlab(expression(Fitted ~ log(Volume) ~~ (mm^3)))
+```
+
+And the leverage-residual plot (dashed lines indicate Cook's distance of 0.5) seems to indicate that there are no outlying datapoints.
+
+```{r long-std-resid-vs-leverage, echo=F, warning=F, message=F}
+# Standardized Residuals vs Fitted
+n = 94
+ggplot(quad.diag, aes(x = leverage, y = ((std.resid)), col = treatment, shape = sex)) +
+  geom_point() + 
+  geom_smooth(se = F, aes(x = leverage, y = ((std.resid))), inherit.aes = F) +
+  geom_line(aes(
+    y = sqrt(
+      1.5 * (1 - seq(from = min(leverage), to = max(leverage), length.out = n)) / seq(min(leverage), max(leverage), length.out = n)
+    ),
+    x = seq(min(leverage), max(leverage), length.out = n)
+  ), inherit.aes = F, 
+    linetype = 2) +
+  geom_line(aes(
+    y = -sqrt(
+      1.5 * (1 - seq(from = min(leverage), to = max(leverage), length.out = n)) / seq(min(leverage), max(leverage), length.out = n)
+    ),
+    x = seq(min(leverage), max(leverage), length.out = n)
+  ), inherit.aes = F, 
+    linetype = 2) +
+  ylab(expression(Standardized~Residuals)) +
+  xlab("Leverage") 
+```
+
+Thus, $M_2$ appears to fit our data quite well.
+Comparing it to the null of no interaction between treatment and time using a LRT, however, indicates only weak evidence of statistical significance.
+
+```{r long-hyp-testing, echo=F, message=F}
+quad.null <- lmer(log_volume ~ time + time2 +  (1|id), df.long)
+anova(quad.mod2, quad.null)
+```
+
+Looking back at the original plot of the longitudinal data, it seems, visually, as though the difference between treatment and vehicle effect is different for male and female mice.
+And, indeed, by fitting $M_2$ using only the male mice, we estimate that tumors in male mice treated with vehicle will grow about 3.03% (profile 95% CI: (1.80%, 4.28%)) faster than those in male mice treated with Atovaquone ($p$-value: $3.875\times 10^-5$).
+
+```{r male-long-testing, echo=F, message=F}
+df.male <- df.long %>% filter(sex == "Male")
+
+male.long <- lmer(log_volume ~ time + time2 + treatment:time + (1|id), df.male)
+male.null <- lmer(log_volume ~ time + time2 +  (1|id), df.male)
+anova(male.long, male.null)
+prof.male <- profile(male.long)
+prof.male <- profile(male.long)
+ci.male <- exp(confint(prof.male))[3:6,]
+ci.male <- cbind(ci.male[,1], exp(summary(male.long)$coefficients[,1]), ci.male[,2])
+# ci.male
+# plot(male.long)
+```
+
+When attempting to apply the same methodology to female mice, we estimate that tumors treated with vehicle only grow 0.08% (profile 95% CI: (-1.09%, 1.28%)) faster than those treated with Atovaquone ($p$-value: 0.8825).
+
+```{r female-long-testing, echo=F, message=F}
+df.female <- df.long %>% filter(sex == "Female")
+
+female.long <- lmer(log_volume ~ time + time2 + treatment:time + (1|id), df.female)
+female.null <- lmer(log_volume ~ time + time2 +  (1|id), df.female)
+anova(female.long, female.null)
+prof.female <- profile(female.long)
+ci.female <- exp(confint(prof.female))[3:6,]
+ci.female <- cbind(ci.female[,1], exp(summary(female.long)$coefficients[,1]), ci.female[,2])
+# ci.female - 1
+# plot(female.long)
+```
+
+To test whether there is any treatment effect considering possibly differential effect between sexes, we fit the model $$
+  M_f: w_{ijk}(t) = \beta_0 + S_{0k} + (\beta_1 + T_{j} + S_{1k} + TS_{jk})t +  \beta_{2} t^2 + \alpha_{ijk} + \varepsilon_{ijkt},
+$$ where
+
+-   $\beta_0$ is the intercept, the mean log-volume (mm$^3$) on day zero, marginal all independent variables (should not be interpreted in this context, as day 0 is not in the range of our data),
+-   $\beta_1, \beta_2$ control for growth rate of log-volume, marginal all other variables,
+-   $T_{j}$ are the treatment effects, and $\sum_jT_{j} = 0$,
+-   $S_{\cdot k}$ are the sex effects, and $\sum_k S_{0k} = \sum_k S_{1k} = 0$,
+-   $TS_{jk}$ is the sex-treatment interaction term for rate of change of log-tumor volume, and:
+    -   for all $k, \sum_jTS_{jk} = 0$,
+    -   for all $j, \sum_kTS_{jk} = 0$,
+-   $\alpha_{ijk}$ is a random intercept for each mouse, and $\alpha_{ijk} \sim_{iid} N(0, \sigma_a^2)$,
+-   $\varepsilon_{ijkt}$ is an error term for each mouse at each time, and $\varepsilon_{ijkt} \sim_{iid} N(0, \sigma^2)$.
+
+```{r full-model-fitting, echo=F}
+mod.big <- lmer(log_volume ~ time + I(time^2) + (treatment:time)*sex + (1|id), df.long)
+
+# Data for diagnostics
+full.diag <- df.long %>%
+  mutate(resid = resid(mod.big, type = "response")) %>%
+  mutate(fitted = fitted(mod.big)) %>%
+  # mutate(std.resid2 = residuals(long.mod2, type = "response", scaled = T)) %>%
+  mutate(std.resid = rstudent(mod.big)) %>%
+  mutate(leverage = hatvalues(mod.big)) %>%
+  mutate(cooks = cooks.distance(mod.big))
+```
+
+This model, again, seems to adhere to linearity assumptions.
+
+```{r full-resid-vs-fitted, echo=F, warning=F, message=F}
+# Residuals vs Fitted
+ggplot(full.diag, aes(x = fitted, y = resid, shape = sex, col=treatment))  +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_smooth(se = T, aes(x = fitted, y = resid), inherit.aes = F) +
+  xlab(expression(Fitted ~ log(Volume) ~~ (mm^3))) +
+  ylab("Residual")
+```
+
+The location-scale plot, looks a bit off, but still no clear evidence of heteroscedasticity, or any pattern.
+
+```{r full-std-resid-vs-fitted, echo=F, warning=F, message=F}
+# Standardized Residuals vs Fitted
+ggplot(full.diag, aes(x = fitted, y = sqrt(abs(std.resid)), col = treatment, shape = sex)) +
+  geom_point() + 
+  geom_smooth(se = F, aes(x = fitted, y = sqrt(abs(std.resid))), inherit.aes = F) +
+  ylab(expression(sqrt("|" ~ Standardized~Residuals ~ "|"))) +
+  xlab(expression(Fitted ~ log(Volume) ~~ (mm^3)))
+```
+
+And the leverage-residual plot (dashed lines indicate Cook's distance of 0.5) seems to indicate that there may be 1 outlying, influential response, but it still has a Cook's distance less than 1, so the effect should not be too extreme.
+
+```{r full-std-resid-vs-leverage, echo=F, warning=F, message=F}
+# Standardized Residuals vs Fitted
+n = 94
+ggplot(full.diag, aes(x = leverage, y = ((std.resid)), col = treatment, shape = sex)) +
+  geom_point() + 
+  geom_smooth(se = F, aes(x = leverage, y = ((std.resid))), inherit.aes = F) +
+  geom_line(aes(
+    y = sqrt(
+      1.5 * (1 - seq(from = min(leverage), to = max(leverage), length.out = n)) / seq(min(leverage), max(leverage), length.out = n)
+    ),
+    x = seq(min(leverage), max(leverage), length.out = n)
+  ), inherit.aes = F, 
+    linetype = 2) +
+  geom_line(aes(
+    y = -sqrt(
+      1.5 * (1 - seq(from = min(leverage), to = max(leverage), length.out = n)) / seq(min(leverage), max(leverage), length.out = n)
+    ),
+    x = seq(min(leverage), max(leverage), length.out = n)
+  ), inherit.aes = F, 
+    linetype = 2) +
+  ylab(expression(Standardized~Residuals)) +
+  xlab("Leverage") 
+```
+
+Then we employ a LRT to compare it to the reduced model, 
+$$
+  M_R: w_{ijk}(t) = \beta_0 + S_{0k} + (\beta_1 + S_{1k})t +  \beta_{2} t^2 + \alpha_{ijk} + \varepsilon_{ijkt}.
+$$ 
+And this test yields a $p$-value of 0.004288, indicating, with high confidence, that there is a statistically significant relationship between treatment with Atovaquone and growth of tumors in mice.
+
+```{r full-long-hyp-testing, echo=F, message=F}
+mod.big.null <- lmer(log_volume ~ time + I(time^2) + sex + sex:time + (1|id), df.long)
+anova(mod.big, mod.big.null)
+```
+
+
+
+
+
+# Discussion
+
+While we failed to find adequate evidence to support an effect of Atovaquone on tumor-growth rate marginal sex, there is compelling evidence that it may be effective when administered to male mice. 
+As seen in the table below (showing estimated fold-difference along with a 95% CI), after 25 days, we estimate that tumors in male mice treated with atovaquone will be half as large as if they had been treated with vehicle. 
+Female mice treated with Atovaquone, on the other hand, will still be roughly the same size as if they had been treated with Vehicle after 29 days. 
+
+
+```{r estimated-fold-changes, echo=F, warning=F, message=F}
+data.frame(
+  t = rep(unique(df.long$time), 2),
+  s = rep(c("Male", "Female"), each = 9)
+) %>%
+  rowwise() %>%
+  mutate(fold_change = {
+    x = as.data.frame(emmeans(mod.big, pairwise ~ treatment | sex+time, cov.reduce = function(coef) t))
+    (x %>%
+      filter(sex == s) %>%
+      filter(contrast == "Atovaquone - Vehicle") %>%
+      mutate(res = paste(
+        round(exp(emmean), 3), 
+        " (", 
+        round(exp(lower.CL), 3), 
+        ", ", 
+        round(exp(upper.CL), 3), 
+        ")", 
+        sep = ""
+      ))
+    )$res[1]
+  }) %>%
+  rename(Time = t, sex = s) %>%
+  pivot_wider(names_from = sex, values_from = fold_change) %>%
+  arrange(Time)
+
+as.data.frame(emmeans(mod.big, pairwise ~ treatment | sex+time, cov.reduce = function(coef) 1))
+```
+
+
+Another comparison between tumor volume in the sexes is the variability in baseline volume.
+As demonstrated in the figure below, it seems that female mice tended to have much higher variability in tumor volume one day one than did male mice.
+When fitting $M_2$ using each sex alone, the estimates for $\sigma_a^2$ were:
+
+- female: 0.181817
+- male: 0.009536.
+
+
+
+
+```{r full-model-fit-plot, echo=F}
+df.long %>%
+  mutate(fit = predict(mod.big, re.form = NA)) %>%
+  # group_by(sex, treatment) %>%
+  # mutate(fit = fit - min(fit)) %>%
+  # group_by(id) %>%
+  # mutate(log_volume = log_volume - min(log_volume)) %>%
+  ggplot(aes(x = time, group = id, color = treatment)) +
+    geom_point(aes(y = fit)) +
+    geom_line(aes(y = fit)) +
+    geom_line(aes(y = log_volume), alpha = 0.3) +
+    facet_wrap( ~ sex) +
+    ylab("log-Volume")
+```
+
+
+
+# Second group
+
+We first check to see if our model reasonably fits our new data.
+The second figure shows that the values we observed values tend to be smaller than the fitted values, which is not inherently bad --- our model accounts for a random intercept per mouse, so this can easily be explained by that. 
+However, the female mice also seem to have a downward facing slope in residuals, indicating that our model may not well explain the relationship between time and volume for female mice. 
+
+```{r}
+df2 <- read.csv("data.csv") %>%
+  filter(group == 2) %>%
+  filter(volume > 0) %>%
+  mutate(treatment = ifelse(treatment == "treatment", "Atovaquone", "Vehicle")) %>%
+  mutate(sex = ifelse(sex == "m", "Male", "Female")) %>%
+  mutate(status = volume > 2000)
+
+df2 %>%
+  mutate(log_volume = log(volume)) %>%
+  group_by(id) %>%
+  mutate(log_volume1 = min(log_volume)) %>%
+  ungroup() %>%
+  mutate(fit = predict(mod.big, newdata=df2, allow.new.levels = T, re.form = ~ (1|id))) %>%
+  # group_by(sex, treatment) %>%
+  # mutate(fit = fit - min(fit)) %>%
+  # group_by(id) %>%
+  # mutate(log_volume = log_volume - min(log_volume)) %>%
+  ggplot(aes(x = time, group = id, color = treatment)) +
+    geom_point(aes(y = fit)) +
+    geom_line(aes(y = fit)) +
+    geom_line(aes(y = log(volume)), alpha = 0.3) +
+    facet_wrap( ~ sex) +
+    ylab("log-Volume")
+
+
+df2 %>%
+  mutate(log_volume = log(volume)) %>%
+  group_by(id) %>%
+  mutate(log_volume1 = min(log_volume)) %>%
+  ungroup() %>%
+  mutate(fit = predict(mod.big, newdata=df2, allow.new.levels = T, re.form = ~ (1|id))) %>%
+  # group_by(sex, treatment) %>%
+  # mutate(fit = fit - min(fit)) %>%
+  # group_by(id) %>%
+  # mutate(log_volume = log_volume - min(log_volume)) %>%
+  ggplot(aes(x = time, group = id, color = treatment)) +
+    geom_point(aes(y = log(volume) - fit)) +
+    geom_line(aes(y = log(volume) - fit)) +
+    facet_wrap( ~ sex) +
+    geom_hline(yintercept=0.0) + 
+    ylab("log-Volume observed - fitted")
+
+df2 %>%
+  mutate(log_volume = log(volume)) %>%
+  group_by(id) %>%
+  mutate(log_volume1 = min(log_volume)) %>%
+  ungroup() %>%
+  mutate(fit = predict(quad.mod, newdata=df2, allow.new.levels = T, re.form = ~ (1|id))) %>%
+  # group_by(sex, treatment) %>%
+  # mutate(fit = fit - min(fit)) %>%
+  # group_by(id) %>%
+  # mutate(log_volume = log_volume - min(log_volume)) %>%
+  ggplot(aes(x = time, group = id, color = treatment)) +
+    geom_point(aes(y = log(volume) - fit)) +
+    geom_line(aes(y = log(volume) - fit)) +
+    facet_wrap( ~ sex) +
+    geom_hline(yintercept=0.0) + 
+    ylab("log-Volume observed - fitted")
+```
+
+
+
